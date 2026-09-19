@@ -6,7 +6,7 @@ export default function Home() {
       {/* HERO SECTION */}
       <section className="grid-bg relative overflow-hidden">
         <div className="mx-auto grid min-h-[80vh] max-w-7xl items-center px-5 py-20 md:grid-cols-2 md:gap-12">
-          
+
           <div>
             <p className="mb-4 font-semibold uppercase tracking-[0.2em] text-cyan-400">
               Cybersecurity Solutions
@@ -32,6 +32,13 @@ export default function Home() {
               </Link>
 
               <Link
+                href="/tools"
+                className="rounded-lg border border-cyan-400 px-6 py-3 font-semibold text-cyan-400 transition hover:bg-cyan-400 hover:text-slate-950"
+              >
+                Security Tools
+              </Link>
+
+              <Link
                 href="/contact"
                 className="rounded-lg border border-slate-600 px-6 py-3 font-semibold text-white transition hover:border-cyan-400"
               >
@@ -52,6 +59,16 @@ export default function Home() {
                 <p className="mt-2 text-slate-400">
                   Security starts before the attack.
                 </p>
+
+                <div className="mt-6 flex justify-center gap-3 text-sm">
+                  <span className="rounded-full bg-cyan-400/10 px-4 py-2 text-cyan-400">
+                    Secure
+                  </span>
+
+                  <span className="rounded-full bg-cyan-400/10 px-4 py-2 text-cyan-400">
+                    Reliable
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -61,6 +78,7 @@ export default function Home() {
 
       {/* ABOUT SECTION */}
       <section className="mx-auto max-w-7xl px-5 py-24">
+
         <div className="max-w-2xl">
           <p className="font-semibold uppercase tracking-widest text-cyan-400">
             Why CyberGuard?
@@ -78,7 +96,8 @@ export default function Home() {
         </div>
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-7">
+
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-7 transition hover:-translate-y-1 hover:border-cyan-400">
             <div className="text-3xl">🔍</div>
 
             <h3 className="mt-4 text-xl font-semibold text-white">
@@ -91,7 +110,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-7">
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-7 transition hover:-translate-y-1 hover:border-cyan-400">
             <div className="text-3xl">🌐</div>
 
             <h3 className="mt-4 text-xl font-semibold text-white">
@@ -103,7 +122,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-7">
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-7 transition hover:-translate-y-1 hover:border-cyan-400">
             <div className="text-3xl">🛡️</div>
 
             <h3 className="mt-4 text-xl font-semibold text-white">
@@ -115,29 +134,164 @@ export default function Home() {
               risks.
             </p>
           </div>
+
+        </div>
+      </section>
+
+      {/* SECURITY TOOLS SECTION */}
+      <section className="border-y border-slate-800 bg-slate-950">
+
+        <div className="mx-auto max-w-7xl px-5 py-24">
+
+          <div className="text-center">
+
+            <p className="font-semibold uppercase tracking-widest text-cyan-400">
+              CYBERGUARD TOOLS
+            </p>
+
+            <h2 className="mt-3 text-3xl font-bold text-white md:text-4xl">
+              Free Security Tools
+            </h2>
+
+            <p className="mx-auto mt-5 max-w-2xl text-slate-400">
+              Use our simple cybersecurity tools to learn more about
+              passwords, IP addresses, and your everyday security habits.
+            </p>
+
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+
+            {/* Password Tool */}
+
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-7 transition hover:-translate-y-1 hover:border-cyan-400">
+
+              <div className="text-4xl">
+                🔐
+              </div>
+
+              <h3 className="mt-5 text-xl font-bold text-white">
+                Password Strength
+              </h3>
+
+              <p className="mt-3 text-slate-400">
+                Check basic password characteristics and learn how to
+                create stronger passwords.
+              </p>
+
+              <Link
+                href="/tools"
+                className="mt-6 inline-block rounded-lg bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
+              >
+                Try Tool →
+              </Link>
+
+            </div>
+
+            {/* IP Tool */}
+
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-7 transition hover:-translate-y-1 hover:border-cyan-400">
+
+              <div className="text-4xl">
+                🌐
+              </div>
+
+              <h3 className="mt-5 text-xl font-bold text-white">
+                IP Address Checker
+              </h3>
+
+              <p className="mt-3 text-slate-400">
+                View basic public information associated with an IP
+                address.
+              </p>
+
+              <Link
+                href="/tools"
+                className="mt-6 inline-block rounded-lg bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
+              >
+                Try Tool →
+              </Link>
+
+            </div>
+
+            {/* Checklist Tool */}
+
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-7 transition hover:-translate-y-1 hover:border-cyan-400">
+
+              <div className="text-4xl">
+                🛡️
+              </div>
+
+              <h3 className="mt-5 text-xl font-bold text-white">
+                Security Checklist
+              </h3>
+
+              <p className="mt-3 text-slate-400">
+                Review your everyday security habits and calculate your
+                security score.
+              </p>
+
+              <Link
+                href="/tools"
+                className="mt-6 inline-block rounded-lg bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
+              >
+                Try Tool →
+              </Link>
+
+            </div>
+
+          </div>
+
+          <div className="mt-12 text-center">
+
+            <Link
+              href="/tools"
+              className="inline-block rounded-lg border border-cyan-400 px-7 py-3 font-semibold text-cyan-400 transition hover:bg-cyan-400 hover:text-slate-950"
+            >
+              View All Security Tools
+            </Link>
+
+          </div>
+
         </div>
       </section>
 
       {/* CTA SECTION */}
       <section className="border-y border-slate-800 bg-[#091522]">
+
         <div className="mx-auto max-w-7xl px-5 py-20 text-center">
+
           <h2 className="text-3xl font-bold text-white md:text-4xl">
             Ready to secure your digital world?
           </h2>
 
           <p className="mx-auto mt-4 max-w-xl text-slate-400">
-            Explore our cybersecurity services and learn how CyberGuard can
-            help protect your systems.
+            Explore our cybersecurity services and learn how CyberGuard
+            can help protect your systems.
           </p>
 
-          <Link
-            href="/services"
-            className="mt-8 inline-block rounded-lg bg-cyan-400 px-7 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
-          >
-            View Our Services
-          </Link>
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+
+            <Link
+              href="/services"
+              className="rounded-lg bg-cyan-400 px-7 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
+            >
+              View Our Services
+            </Link>
+
+            <Link
+              href="/contact"
+              className="rounded-lg border border-slate-600 px-7 py-3 font-semibold text-white transition hover:border-cyan-400"
+            >
+              Contact CyberGuard
+            </Link>
+
+          </div>
+
         </div>
+
       </section>
+
     </main>
   );
 }
