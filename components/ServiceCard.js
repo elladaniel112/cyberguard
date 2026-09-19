@@ -1,0 +1,1 @@
+export default function ServiceCard({icon,title,text}){return <article className="card p-6 transition hover:-translate-y-1 hover:border-cyan-400/50"><div className="mb-5 text-3xl">{icon}</div><h3 className="text-xl font-bold">{title}</h3><p className="mt-3 leading-7 text-slate-400">{text}</p></article>}

@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+:root { --bg:#07111f; --panel:#0d1b2d; --line:#1d3047; --text:#e8f0f7; --muted:#91a4b8; --cyan:#35d6ff; --green:#65f0b0; }
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { margin:0; background:var(--bg); color:var(--text); font-family:Arial, Helvetica, sans-serif; }
+a { text-decoration:none; }
+.grid-bg { background-image: linear-gradient(rgba(53,214,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(53,214,255,.05) 1px, transparent 1px); background-size:42px 42px; }
+.glow { box-shadow: 0 0 80px rgba(53,214,255,.12); }
+.card { background:rgba(13,27,45,.78); border:1px solid var(--line); border-radius:20px; }
