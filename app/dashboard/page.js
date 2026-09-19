@@ -20,9 +20,9 @@ const ADMIN_UID = "4p7XTqdcQqbr7otfruFMnemLDK43";
 
 export default function DashboardPage() {
   const [user, setUser] = useState(null);
+
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
-
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
 
@@ -33,26 +33,31 @@ export default function DashboardPage() {
   const [scanLoading, setScanLoading] = useState(false);
   const [selectedScan, setSelectedScan] = useState(null);
 
+  // VPN
+  const [vpnConnected, setVpnConnected] = useState(false);
+  const [vpnServer, setVpnServer] = useState("Nigeria");
+  const [vpnLoading, setVpnLoading] = useState(false);
+
+  // AUTHENTICATION
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (currentUser) => {
-        if (currentUser) {
-          setUser(currentUser);
-          setName(currentUser.displayName || "");
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        setName(currentUser.displayName || "");
 
-          await loadScanHistory(currentUser.uid);
-        }
-
-        setLoading(false);
+        await loadScanHistory(currentUser.uid);
+      } else {
+        setUser(null);
+        window.location.href = "/login";
       }
-    );
+
+      setLoading(false);
+    });
 
     return () => unsubscribe();
   }, []);
 
-  /* LOAD SCAN HISTORY */
-
+  // LOAD SCAN HISTORY
   const loadScanHistory = async (userId) => {
     try {
       setScanLoading(true);
@@ -65,21 +70,20 @@ export default function DashboardPage() {
 
       const snapshot = await getDocs(scansQuery);
 
-      const scans = snapshot.docs.map((document) => ({
-        id: document.id,
-        ...document.data(),
+      const scans = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
       }));
 
       setScanHistory(scans);
     } catch (error) {
-      console.error("Error loading scan history:", error);
+      console.error("Scan history error:", error);
     } finally {
       setScanLoading(false);
     }
   };
 
-  /* UPDATE PROFILE */
-
+  // UPDATE PROFILE NAME
   const handleUpdateName = async (e) => {
     e.preventDefault();
 
@@ -94,32 +98,40 @@ export default function DashboardPage() {
     try {
       setSaving(true);
 
-      await updateProfile(user, {
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) {
+        setError("Your session has expired. Please log in again.");
+        return;
+      }
+
+      await updateProfile(currentUser, {
         displayName: name.trim(),
       });
 
-      setUser({
-        ...user,
-        displayName: name.trim(),
-      });
+      await currentUser.reload();
+
+      setUser(auth.currentUser);
 
       setMessage("Profile updated successfully! 🎉");
     } catch (error) {
-      console.error(error);
-      setError("Unable to update your profile.");
+      console.error("Profile update error:", error);
+
+      setError(
+        error?.message || "Unable to update your profile."
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  /* PASSWORD RESET */
-
+  // PASSWORD RESET
   const handlePasswordReset = async () => {
     setMessage("");
     setError("");
 
     if (!user?.email) {
-      setError("No email address is available for this account.");
+      setError("No email address is associated with this account.");
       return;
     }
 
@@ -129,42 +141,74 @@ export default function DashboardPage() {
       await sendPasswordResetEmail(auth, user.email);
 
       setMessage(
-        `Password reset email sent to ${user.email}.`
+        "Password reset email sent! Check your inbox. 📧"
       );
     } catch (error) {
-      console.error(error);
-      setError("Unable to send the password reset email.");
+      console.error("Password reset error:", error);
+
+      setError("Unable to send password reset email.");
     } finally {
       setResetting(false);
     }
   };
 
-  /* LOGOUT */
-
+  // SIGN OUT
   const handleLogout = async () => {
     try {
+      setError("");
+      setMessage("");
+
       await signOut(auth);
+
+      window.location.href = "/login";
     } catch (error) {
       console.error("Logout error:", error);
+
+      setError("Unable to sign out. Please try again.");
     }
   };
 
-  /* DATE */
+  // VPN CONNECT / DISCONNECT
+  const handleVpnToggle = async () => {
+    try {
+      setVpnLoading(true);
 
+      await new Promise((resolve) =>
+        setTimeout(resolve, 1200)
+      );
+
+      setVpnConnected((current) => !current);
+    } catch (error) {
+      console.error("VPN error:", error);
+    } finally {
+      setVpnLoading(false);
+    }
+  };
+
+  // SCAN DATE
   const getScanDate = (scan) => {
     if (!scan?.createdAt) {
-      return "Date unavailable";
+      return "Unknown date";
     }
 
     try {
-      return scan.createdAt.toDate().toLocaleString();
+      if (scan.createdAt.toDate) {
+        return scan.createdAt.toDate().toLocaleString();
+      }
+
+      if (scan.createdAt.seconds) {
+        return new Date(
+          scan.createdAt.seconds * 1000
+        ).toLocaleString();
+      }
+
+      return new Date(scan.createdAt).toLocaleString();
     } catch {
-      return "Date unavailable";
+      return "Unknown date";
     }
   };
 
-  /* SCORE COLOR */
-
+  // SCORE COLOR
   const getScoreColor = (score) => {
     if (score >= 80) {
       return "text-green-400";
@@ -177,8 +221,7 @@ export default function DashboardPage() {
     return "text-red-400";
   };
 
-  /* SCORE MESSAGE */
-
+  // SCORE MESSAGE
   const getScoreMessage = (score) => {
     if (score >= 80) {
       return "Good security configuration";
@@ -191,17 +234,15 @@ export default function DashboardPage() {
     return "Several security improvements are recommended";
   };
 
-  /* LOADING */
-
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
         <div className="text-center">
-          <div className="text-5xl mb-5">
+          <div className="text-5xl mb-4 animate-pulse">
             🛡️
           </div>
 
-          <p className="text-cyan-400">
+          <p className="text-slate-400">
             Loading your dashboard...
           </p>
         </div>
@@ -209,92 +250,136 @@ export default function DashboardPage() {
     );
   }
 
-  /* NOT LOGGED IN */
-
   if (!user) {
-    return (
-      <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-6">
-        <div className="text-center max-w-md">
-          <div className="text-5xl mb-5">
-            🔒
-          </div>
-
-          <h1 className="text-3xl font-bold mb-4">
-            Access Denied
-          </h1>
-
-          <p className="text-slate-400 mb-6">
-            Please log in to access your dashboard.
-          </p>
-
-          <a
-            href="/login"
-            className="inline-block bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-6 py-3 rounded-lg transition"
-          >
-            Go to Login
-          </a>
-        </div>
-      </main>
-    );
+    return null;
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white px-5 py-12">
-      <div className="max-w-6xl mx-auto">
+    <main className="min-h-screen bg-slate-950 text-white">
 
-        {/* HEADER */}
+      {/* HEADER */}
+      <header className="border-b border-slate-800 bg-slate-950/95">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between">
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-10">
           <div>
-            <p className="text-cyan-400 text-sm font-semibold uppercase tracking-widest mb-2">
-              CyberGuard Dashboard
-            </p>
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">
+                🛡️
+              </span>
 
-            <h1 className="text-4xl md:text-5xl font-bold">
-              Welcome,{" "}
-              {user.displayName || "User"} 👋
-            </h1>
+              <div>
+                <h1 className="text-2xl font-bold">
+                  CyberGuard
+                </h1>
 
-            <p className="text-slate-400 mt-3">
-              Manage your account and improve your digital security.
-            </p>
+                <p className="text-xs text-slate-500">
+                  Security Dashboard
+                </p>
+              </div>
+            </div>
           </div>
 
-          <button
-            onClick={handleLogout}
-            className="bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white px-5 py-3 rounded-lg transition"
-          >
-            Log Out
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+
+            <a
+              href="/"
+              className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-500 hover:text-cyan-400"
+            >
+              Home
+            </a>
+
+            <a
+              href="/tools"
+              className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-500 hover:text-cyan-400"
+            >
+              Security Tools
+            </a>
+
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/20"
+            >
+              🚪 Sign Out
+            </button>
+
+          </div>
         </div>
+      </header>
+
+      {/* MAIN */}
+      <div className="mx-auto max-w-7xl px-6 py-10">
+
+        {/* WELCOME */}
+        <section className="mb-8">
+
+          <p className="text-sm text-cyan-400">
+            Welcome back
+          </p>
+
+          <h2 className="mt-2 text-3xl font-bold md:text-4xl">
+            {user.displayName || "CyberGuard User"} 👋
+          </h2>
+
+          <p className="mt-3 text-slate-400">
+            Manage your account, monitor security scans,
+            and protect your digital environment.
+          </p>
+
+        </section>
+
+        {/* MESSAGES */}
+        {message && (
+          <div className="mb-6 rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-green-300">
+            {message}
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-300">
+            {error}
+          </div>
+        )}
+
+        {/* ACCOUNT OVERVIEW */}
+        <section className="grid gap-5 md:grid-cols-3">
+
+          <StatusCard
+            icon="👤"
+            title="Account"
+            value="Active"
+            description="Your account is active"
+          />
+
+          <StatusCard
+            icon="🔐"
+            title="Authentication"
+            value="Protected"
+            description="Firebase Authentication"
+          />
+
+          <StatusCard
+            icon="🛡️"
+            title="Security Scans"
+            value={scanHistory.length}
+            description="Saved website scans"
+          />
+
+        </section>
 
         {/* PROFILE */}
+        <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
-          <div className="flex items-center gap-4 mb-7">
-            <div className="w-14 h-14 rounded-full bg-cyan-400/10 border border-cyan-400/30 flex items-center justify-center text-2xl">
-              👤
-            </div>
-
-            <div>
-              <h2 className="text-2xl font-bold">
-                Your Profile
-              </h2>
-
-              <p className="text-slate-400 text-sm">
-                Update your account information.
-              </p>
-            </div>
-          </div>
+          <HeaderCard
+            icon="👤"
+            title="Profile"
+            description="Update the name displayed on your CyberGuard account."
+          />
 
           <form
             onSubmit={handleUpdateName}
-            className="space-y-5"
+            className="mt-6"
           >
-            <div>
-              <label className="block text-sm mb-2">
-                Display Name
-              </label>
+            <div className="grid gap-4 md:grid-cols-[1fr_auto]">
 
               <input
                 type="text"
@@ -302,229 +387,263 @@ export default function DashboardPage() {
                 onChange={(e) =>
                   setName(e.target.value)
                 }
-                className="w-full max-w-xl px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 outline-none focus:border-cyan-500 transition"
+                placeholder="Your full name"
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-500"
               />
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-lg bg-cyan-500 px-6 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving
+                  ? "Saving..."
+                  : "Update Name"}
+              </button>
+
             </div>
-
-            <div>
-              <label className="block text-sm mb-2">
-                Email Address
-              </label>
-
-              <input
-                type="email"
-                value={user.email || ""}
-                disabled
-                className="w-full max-w-xl px-4 py-3 rounded-lg bg-slate-800 border border-slate-700 text-slate-400"
-              />
-            </div>
-
-            {error && (
-              <div className="max-w-xl rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
-
-            {message && (
-              <div className="max-w-xl rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-green-400 text-sm">
-                {message}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-6 py-3 rounded-lg transition disabled:opacity-50"
-            >
-              {saving ? "Saving..." : "Update Profile"}
-            </button>
           </form>
-        </div>
 
-        {/* ACCOUNT STATUS */}
+        </section>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <StatusCard
-            icon="👤"
-            title="Account"
-            value="Active"
-          />
+        {/* VPN */}
+        <section className="mt-8">
 
-          <StatusCard
-            icon="🔐"
-            title="Authentication"
-            value="Email Account"
-          />
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
 
-          <StatusCard
-            icon="🛡️"
-            title="Security"
-            value="Protected"
-          />
-        </div>
+            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
 
-        {/* SCAN STATISTICS */}
+              <div>
+                <div className="mb-2 flex items-center gap-3">
 
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+                  <span className="text-3xl">
+                    🔐
+                  </span>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <div className="text-3xl mb-4">
-              🌐
+                  <h2 className="text-2xl font-bold">
+                    Secure VPN
+                  </h2>
+
+                </div>
+
+                <p className="max-w-xl text-sm text-slate-400">
+                  Manage your CyberGuard VPN connection,
+                  select a server location, and view your
+                  connection status.
+                </p>
+              </div>
+
+              <div
+                className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                  vpnConnected
+                    ? "bg-green-500/10 text-green-400"
+                    : "bg-slate-800 text-slate-400"
+                }`}
+              >
+                {vpnConnected
+                  ? "● VPN Connected"
+                  : "● VPN Disconnected"}
+              </div>
+
             </div>
 
-            <p className="text-slate-400 text-sm">
-              Total Scans
-            </p>
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
 
-            <p className="text-4xl font-bold text-cyan-400 mt-2">
-              {scanHistory.length}
-            </p>
-          </div>
+              {/* SERVER */}
+              <div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <div className="text-3xl mb-4">
-              🛡️
+                <label className="mb-2 block text-sm font-medium text-slate-300">
+                  VPN Server
+                </label>
+
+                <select
+                  value={vpnServer}
+                  onChange={(e) =>
+                    setVpnServer(e.target.value)
+                  }
+                  disabled={vpnConnected}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-500 disabled:opacity-50"
+                >
+                  <option value="Nigeria">
+                    🇳🇬 Nigeria
+                  </option>
+
+                  <option value="United Kingdom">
+                    🇬🇧 United Kingdom
+                  </option>
+
+                  <option value="United States">
+                    🇺🇸 United States
+                  </option>
+
+                  <option value="Germany">
+                    🇩🇪 Germany
+                  </option>
+
+                  <option value="Canada">
+                    🇨🇦 Canada
+                  </option>
+                </select>
+
+              </div>
+
+              {/* CONNECTION */}
+              <div>
+
+                <label className="mb-2 block text-sm font-medium text-slate-300">
+                  Connection
+                </label>
+
+                <div className="rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-slate-300">
+                  {vpnConnected
+                    ? `Connected to ${vpnServer}`
+                    : "No active VPN connection"}
+                </div>
+
+              </div>
+
             </div>
 
-            <p className="text-slate-400 text-sm">
-              Average Score
-            </p>
+            {/* VPN BUTTON */}
+            <div className="mt-6">
 
-            <p className="text-4xl font-bold text-green-400 mt-2">
-              {scanHistory.length
-                ? Math.round(
-                    scanHistory.reduce(
-                      (total, scan) =>
-                        total + (scan.score || 0),
-                      0
-                    ) / scanHistory.length
-                  )
-                : 0}
-              %
-            </p>
-          </div>
+              <button
+                onClick={handleVpnToggle}
+                disabled={vpnLoading}
+                className={`w-full rounded-lg px-6 py-3 font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                  vpnConnected
+                    ? "bg-red-500 text-white hover:bg-red-600"
+                    : "bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+                }`}
+              >
+                {vpnLoading
+                  ? "Connecting..."
+                  : vpnConnected
+                  ? "Disconnect VPN"
+                  : "Connect VPN"}
+              </button>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <div className="text-3xl mb-4">
-              🔍
             </div>
 
-            <p className="text-slate-400 text-sm">
-              Latest Scan
+            {/* VPN DETAILS */}
+            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                <p className="text-xs text-slate-500">
+                  Server
+                </p>
+
+                <p className="mt-1 font-semibold text-white">
+                  {vpnServer}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                <p className="text-xs text-slate-500">
+                  Encryption
+                </p>
+
+                <p className="mt-1 font-semibold text-cyan-400">
+                  Protected
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                <p className="text-xs text-slate-500">
+                  Connection
+                </p>
+
+                <p
+                  className={`mt-1 font-semibold ${
+                    vpnConnected
+                      ? "text-green-400"
+                      : "text-slate-400"
+                  }`}
+                >
+                  {vpnConnected
+                    ? "Secure"
+                    : "Not connected"}
+                </p>
+              </div>
+
+            </div>
+
+            <p className="mt-5 text-xs text-slate-500">
+              Dashboard VPN interface. An actual VPN tunnel
+              requires a configured VPN server and client.
             </p>
 
-            <p className="text-lg font-bold text-cyan-400 mt-2 break-all">
-              {scanHistory[0]?.website ||
-                "No scans yet"}
-            </p>
           </div>
 
-        </div>
+        </section>
 
         {/* SCAN HISTORY */}
+        <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-8">
-
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 border-b border-slate-800">
-
-            <div>
-              <p className="text-cyan-400 text-sm font-semibold uppercase tracking-wider">
-                Security Activity
-              </p>
-
-              <h2 className="text-2xl font-bold mt-1">
-                Scan History
-              </h2>
-            </div>
-
-            <a
-              href="/tools"
-              className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-5 py-3 rounded-lg transition text-center"
-            >
-              New Scan →
-            </a>
-
-          </div>
+          <HeaderCard
+            icon="🔎"
+            title="Website Scan History"
+            description="Your previous CyberGuard security scans."
+          />
 
           {scanLoading ? (
-
-            <div className="p-10 text-center">
-              <div className="text-4xl mb-4">
-                🔄
-              </div>
-
-              <p className="text-slate-400">
-                Loading scan history...
-              </p>
+            <div className="mt-8 text-center text-slate-400">
+              Loading scan history...
             </div>
-
           ) : scanHistory.length === 0 ? (
-
-            <div className="p-10 text-center">
-              <div className="text-5xl mb-5">
+            <div className="mt-8 rounded-xl border border-dashed border-slate-700 bg-slate-950 p-8 text-center">
+              <div className="text-4xl">
                 🔍
               </div>
 
-              <h3 className="text-xl font-semibold">
+              <h3 className="mt-3 font-semibold">
                 No scans yet
               </h3>
 
-              <p className="text-slate-400 mt-2 mb-6">
-                Run your first website security
-                scan to see it here.
+              <p className="mt-2 text-sm text-slate-500">
+                Run your first website security scan
+                to see it here.
               </p>
 
               <a
                 href="/tools"
-                className="inline-block bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-6 py-3 rounded-lg transition"
+                className="mt-5 inline-block rounded-lg bg-cyan-500 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-400"
               >
-                Start a Security Scan
+                Open Security Scanner
               </a>
             </div>
-
           ) : (
-
-            <div className="divide-y divide-slate-800">
+            <div className="mt-6 space-y-4">
 
               {scanHistory.map((scan) => (
 
                 <button
                   key={scan.id}
-                  type="button"
                   onClick={() =>
                     setSelectedScan(scan)
                   }
-                  className="w-full text-left p-6 hover:bg-slate-800/60 transition"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 p-5 text-left transition hover:border-cyan-500/50"
                 >
 
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
-                    <div className="flex items-start gap-4">
+                    <div className="min-w-0">
 
-                      <div className="w-12 h-12 rounded-xl bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center text-xl shrink-0">
-                        🌐
-                      </div>
+                      <p className="truncate font-semibold text-white">
+                        {scan.target?.hostname ||
+                          scan.hostname ||
+                          "Unknown website"}
+                      </p>
 
-                      <div>
+                      <p className="mt-1 truncate text-sm text-slate-500">
+                        {scan.target?.url ||
+                          scan.url ||
+                          "No URL available"}
+                      </p>
 
-                        <h3 className="font-bold text-lg break-all">
-                          {scan.website ||
-                            "Unknown website"}
-                        </h3>
-
-                        <p className="text-slate-500 text-sm mt-1 break-all">
-                          {scan.url}
-                        </p>
-
-                        <p className="text-cyan-400 text-xs mt-2">
-                          Click to view full report →
-                        </p>
-
-                        <p className="text-slate-500 text-xs mt-1">
-                          {getScanDate(scan)}
-                        </p>
-
-                      </div>
+                      <p className="mt-2 text-xs text-slate-600">
+                        {getScanDate(scan)}
+                      </p>
 
                     </div>
 
@@ -532,22 +651,22 @@ export default function DashboardPage() {
 
                       <div className="text-right">
 
-                        <p className="text-slate-500 text-xs uppercase tracking-wider">
-                          Security Score
-                        </p>
-
                         <p
-                          className={`text-3xl font-bold ${getScoreColor(
+                          className={`text-2xl font-bold ${getScoreColor(
                             scan.score || 0
                           )}`}
                         >
                           {scan.score || 0}%
                         </p>
 
+                        <p className="text-xs text-slate-500">
+                          Security Score
+                        </p>
+
                       </div>
 
-                      <span className="rounded-full bg-green-400/10 border border-green-400/20 text-green-400 px-3 py-1 text-xs font-semibold">
-                        Completed
+                      <span className="text-slate-500">
+                        →
                       </span>
 
                     </div>
@@ -559,185 +678,108 @@ export default function DashboardPage() {
               ))}
 
             </div>
-
           )}
 
-        </div>
+        </section>
 
-        {/* FULL SCAN REPORT */}
-
+        {/* SELECTED SCAN REPORT */}
         {selectedScan && (
+          <section className="mt-8 rounded-2xl border border-cyan-500/20 bg-slate-900 p-6 shadow-xl">
 
-          <div className="bg-slate-900 border border-cyan-400/20 rounded-2xl p-8 mb-8">
-
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5 mb-8">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
 
               <div>
 
-                <p className="text-cyan-400 text-sm font-semibold uppercase tracking-wider">
-                  Full Security Report
+                <p className="text-sm text-cyan-400">
+                  Security Report
                 </p>
 
-                <h2 className="text-3xl font-bold mt-2 break-all">
-                  {selectedScan.website ||
+                <h2 className="mt-1 break-all text-2xl font-bold">
+                  {selectedScan.target?.hostname ||
+                    selectedScan.hostname ||
                     "Website Scan"}
                 </h2>
 
-                <p className="text-slate-500 mt-2 break-all">
-                  {selectedScan.url}
-                </p>
-
-                <p className="text-slate-500 text-sm mt-2">
-                  Scanned:{" "}
-                  {getScanDate(selectedScan)}
+                <p className="mt-2 break-all text-sm text-slate-500">
+                  {selectedScan.target?.url ||
+                    selectedScan.url ||
+                    "No URL available"}
                 </p>
 
               </div>
 
               <button
-                type="button"
                 onClick={() =>
                   setSelectedScan(null)
                 }
-                className="border border-slate-700 hover:border-red-400 hover:text-red-400 px-4 py-2 rounded-lg transition"
+                className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-red-500 hover:text-red-400"
               >
-                Close
+                Close Report
               </button>
 
             </div>
 
-            {/* SCORE CARDS */}
+            {/* SCORE */}
+            <div className="mt-6 rounded-xl border border-slate-800 bg-slate-950 p-6">
 
-            <div className="grid md:grid-cols-4 gap-4 mb-8">
+              <div className="flex flex-col items-center justify-center text-center">
 
-              <div className="bg-slate-800/60 rounded-xl p-5">
-                <p className="text-slate-400 text-sm">
+                <p className="text-sm text-slate-500">
                   Security Score
                 </p>
 
                 <p
-                  className={`text-4xl font-bold mt-2 ${getScoreColor(
+                  className={`mt-2 text-6xl font-bold ${getScoreColor(
                     selectedScan.score || 0
                   )}`}
                 >
                   {selectedScan.score || 0}%
                 </p>
-              </div>
 
-              <div className="bg-slate-800/60 rounded-xl p-5">
-                <p className="text-slate-400 text-sm">
-                  Passed Checks
+                <p className="mt-2 text-slate-400">
+                  {getScoreMessage(
+                    selectedScan.score || 0
+                  )}
                 </p>
 
-                <p className="text-4xl font-bold text-green-400 mt-2">
-                  {selectedScan.checks?.filter(
-                    (check) => check.passed
-                  ).length || 0}
-                </p>
-              </div>
-
-              <div className="bg-slate-800/60 rounded-xl p-5">
-                <p className="text-slate-400 text-sm">
-                  Failed Checks
-                </p>
-
-                <p className="text-4xl font-bold text-red-400 mt-2">
-                  {selectedScan.checks?.filter(
-                    (check) => !check.passed
-                  ).length || 0}
-                </p>
-              </div>
-
-              <div className="bg-slate-800/60 rounded-xl p-5">
-                <p className="text-slate-400 text-sm">
-                  HTTP Status
-                </p>
-
-                <p className="text-2xl font-bold text-cyan-400 mt-2">
-                  {selectedScan.httpStatus ||
-                    "N/A"}
-                </p>
               </div>
 
             </div>
 
-            {/* ASSESSMENT */}
+            {/* CHECKS */}
+            <div className="mt-6">
 
-            <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-6 mb-8">
-
-              <p className="text-slate-500 text-sm">
-                Assessment
-              </p>
-
-              <p className="text-white font-semibold text-lg mt-2">
-                {getScoreMessage(
-                  selectedScan.score || 0
-                )}
-              </p>
-
-              <p className="text-slate-400 text-sm mt-2">
-                Protocol:{" "}
-                {selectedScan.protocol ||
-                  "Not available"}
-              </p>
-
-            </div>
-
-            {/* SECURITY CHECKS */}
-
-            <div className="mb-8">
-
-              <h3 className="text-2xl font-bold mb-5">
-                🛡️ Security Checks
+              <h3 className="text-xl font-bold">
+                Security Checks
               </h3>
 
-              {selectedScan.checks?.length ? (
-
-                <div className="space-y-3">
+              {selectedScan.checks &&
+              selectedScan.checks.length > 0 ? (
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
 
                   {selectedScan.checks.map(
                     (check, index) => (
 
                       <div
-                        key={`${check.name}-${index}`}
-                        className={`rounded-xl border p-5 ${
-                          check.passed
-                            ? "border-green-500/20 bg-green-500/5"
-                            : "border-red-500/20 bg-red-500/5"
-                        }`}
+                        key={index}
+                        className="rounded-xl border border-slate-800 bg-slate-950 p-5"
                       >
 
-                        <div className="flex items-start gap-4">
+                        <div className="flex items-start gap-3">
 
-                          <div className="text-2xl">
+                          <span className="text-xl">
                             {check.passed
                               ? "✅"
-                              : "⚠️"}
-                          </div>
+                              : "❌"}
+                          </span>
 
-                          <div className="flex-1">
+                          <div>
 
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <h4 className="font-semibold">
+                              {check.name}
+                            </h4>
 
-                              <h4 className="font-semibold">
-                                {check.name}
-                              </h4>
-
-                              <span
-                                className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                                  check.passed
-                                    ? "bg-green-400/10 text-green-400"
-                                    : "bg-red-400/10 text-red-400"
-                                }`}
-                              >
-                                {check.passed
-                                  ? "PASSED"
-                                  : "NEEDS ATTENTION"}
-                              </span>
-
-                            </div>
-
-                            <p className="text-slate-400 text-sm mt-2">
+                            <p className="mt-1 text-sm text-slate-500">
                               {check.description}
                             </p>
 
@@ -751,293 +793,198 @@ export default function DashboardPage() {
                   )}
 
                 </div>
-
               ) : (
-
-                <div className="bg-yellow-400/5 border border-yellow-400/20 rounded-xl p-5">
-                  <p className="text-yellow-400 font-semibold">
-                    Detailed checks are not available for this older scan.
-                  </p>
-
-                  <p className="text-slate-400 text-sm mt-2">
-                    Run a new scan to save the detailed security checks.
-                  </p>
+                <div className="mt-4 rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">
+                  Detailed security checks were not saved
+                  for this scan.
                 </div>
-
               )}
 
             </div>
 
             {/* SECURITY HEADERS */}
+            <div className="mt-8">
 
-            <div className="mb-8">
-
-              <h3 className="text-2xl font-bold mb-5">
-                🔐 Security Headers
+              <h3 className="text-xl font-bold">
+                Security Headers
               </h3>
 
               {selectedScan.securityHeaders ? (
+                <div className="mt-4 space-y-3">
 
-                <div className="grid md:grid-cols-2 gap-4">
+                  {Object.entries(
+                    selectedScan.securityHeaders
+                  ).map(([key, value]) => (
 
-                  <HeaderCard
-                    name="Strict-Transport-Security"
-                    value={
-                      selectedScan
-                        .securityHeaders
-                        ?.strictTransportSecurity
-                    }
-                  />
+                    <div
+                      key={key}
+                      className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950 p-4 md:flex-row md:items-center md:justify-between"
+                    >
 
-                  <HeaderCard
-                    name="Content-Security-Policy"
-                    value={
-                      selectedScan
-                        .securityHeaders
-                        ?.contentSecurityPolicy
-                    }
-                  />
+                      <span className="font-medium text-slate-300">
+                        {key
+                          .replace(/([A-Z])/g, " $1")
+                          .replace(/^./, (letter) =>
+                            letter.toUpperCase()
+                          )}
+                      </span>
 
-                  <HeaderCard
-                    name="X-Frame-Options"
-                    value={
-                      selectedScan
-                        .securityHeaders
-                        ?.xFrameOptions
-                    }
-                  />
+                      <span
+                        className={`break-all text-sm ${
+                          value
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {value || "Not detected"}
+                      </span>
 
-                  <HeaderCard
-                    name="X-Content-Type-Options"
-                    value={
-                      selectedScan
-                        .securityHeaders
-                        ?.xContentTypeOptions
-                    }
-                  />
+                    </div>
 
-                  <HeaderCard
-                    name="Referrer-Policy"
-                    value={
-                      selectedScan
-                        .securityHeaders
-                        ?.referrerPolicy
-                    }
-                  />
-
-                  <HeaderCard
-                    name="Permissions-Policy"
-                    value={
-                      selectedScan
-                        .securityHeaders
-                        ?.permissionsPolicy
-                    }
-                  />
+                  ))}
 
                 </div>
-
               ) : (
-
-                <div className="bg-yellow-400/5 border border-yellow-400/20 rounded-xl p-5">
-                  <p className="text-yellow-400 font-semibold">
-                    Security header information is not available for this older scan.
-                  </p>
-
-                  <p className="text-slate-400 text-sm mt-2">
-                    Run a new scan to save the latest header information.
-                  </p>
+                <div className="mt-4 rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">
+                  Security header information was not saved
+                  for this scan.
                 </div>
-
               )}
 
             </div>
 
             {/* WEBSITE INFORMATION */}
+            <div className="mt-8">
 
-            <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-6">
-
-              <h3 className="text-xl font-bold mb-5">
+              <h3 className="text-xl font-bold">
                 Website Information
               </h3>
 
-              <div className="grid md:grid-cols-2 gap-5">
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
 
                 <InfoItem
-                  label="Website"
+                  title="Protocol"
                   value={
-                    selectedScan.website
+                    selectedScan.protocol ||
+                    selectedScan.target?.protocol ||
+                    "Unknown"
                   }
                 />
 
                 <InfoItem
-                  label="URL"
-                  value={
-                    selectedScan.url
-                  }
-                />
-
-                <InfoItem
-                  label="Protocol"
-                  value={
-                    selectedScan.protocol
-                  }
-                />
-
-                <InfoItem
-                  label="HTTP Status"
+                  title="HTTP Status"
                   value={
                     selectedScan.httpStatus
                       ? `${selectedScan.httpStatus} ${
-                          selectedScan.httpStatusText ||
-                          ""
+                          selectedScan.httpStatusText || ""
                         }`
-                      : "Not available"
+                      : selectedScan.response?.status
+                      ? `${selectedScan.response.status} ${
+                          selectedScan.response.statusText || ""
+                        }`
+                      : "Unknown"
                   }
                 />
 
                 <InfoItem
-                  label="Scan Status"
-                  value={
-                    selectedScan.status ||
-                    "completed"
-                  }
-                />
-
-                <InfoItem
-                  label="Scan ID"
-                  value={
-                    selectedScan.id
-                  }
+                  title="Scanned"
+                  value={getScanDate(selectedScan)}
                 />
 
               </div>
 
             </div>
 
-            <div className="mt-6 flex flex-col sm:flex-row gap-3">
-
-              <a
-                href="/tools"
-                className="inline-block text-center bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-6 py-3 rounded-lg transition"
-              >
-                Run New Scan →
-              </a>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setSelectedScan(null)
-                }
-                className="border border-slate-700 hover:border-cyan-400 hover:text-cyan-400 font-semibold px-6 py-3 rounded-lg transition"
-              >
-                Back to Scan History
-              </button>
-
-            </div>
-
-          </div>
-
+          </section>
         )}
 
-        {/* QUICK ACTIONS */}
+        {/* QUICK ACCESS */}
+        <section className="mt-8">
 
-        <div className="mb-8">
-
-          <h2 className="text-2xl font-bold mb-5">
+          <h2 className="text-2xl font-bold">
             Quick Access
           </h2>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="mt-5 grid gap-5 md:grid-cols-3">
 
             <QuickCard
+              icon="🔍"
+              title="Security Scanner"
+              description="Scan websites for important security headers."
               href="/tools"
-              icon="🛡️"
-              title="Security Tools"
-              description="Check passwords, IP addresses, and websites."
-              linkText="Open Tools →"
             />
 
             <QuickCard
-              href="/blog"
               icon="📝"
-              title="Cybersecurity Blog"
-              description="Learn about cybersecurity and digital safety."
-              linkText="Read Articles →"
+              title="CyberGuard Blog"
+              description="Learn about cybersecurity and online safety."
+              href="/blog"
             />
 
             <QuickCard
+              icon="💬"
+              title="Contact Support"
+              description="Send a message to the CyberGuard team."
               href="/contact"
-              icon="📩"
-              title="Contact CyberGuard"
-              description="Send us a message or ask about our services."
-              linkText="Contact Us →"
             />
 
           </div>
 
-        </div>
+        </section>
 
         {/* PASSWORD SECURITY */}
+        <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
+          <HeaderCard
+            icon="🔑"
+            title="Password Security"
+            description="Keep your CyberGuard account protected."
+          />
 
-          <div className="flex items-center gap-4 mb-4">
-
-            <div className="text-3xl">
-              🔑
-            </div>
+          <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
             <div>
-
-              <h2 className="text-2xl font-bold">
-                Password Security
-              </h2>
-
-              <p className="text-slate-400 text-sm">
-                Manage your account password.
+              <p className="font-semibold">
+                Reset your password
               </p>
 
+              <p className="mt-1 text-sm text-slate-500">
+                We'll send a secure password reset link
+                to your email address.
+              </p>
             </div>
+
+            <button
+              onClick={handlePasswordReset}
+              disabled={resetting}
+              className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-5 py-3 font-semibold text-cyan-400 transition hover:bg-cyan-500/20 disabled:opacity-50"
+            >
+              {resetting
+                ? "Sending..."
+                : "Reset Password"}
+            </button>
 
           </div>
 
-          <p className="text-slate-400 leading-7 max-w-2xl">
-            If you want to change your password,
-            CyberGuard can send a secure password
-            reset link to your email address.
-          </p>
+        </section>
 
-          <button
-            onClick={handlePasswordReset}
-            disabled={resetting}
-            className="mt-6 border border-cyan-400 text-cyan-400 hover:bg-cyan-400 hover:text-slate-950 font-semibold px-6 py-3 rounded-lg transition disabled:opacity-50"
-          >
-            {resetting
-              ? "Sending..."
-              : "Send Password Reset Email"}
-          </button>
-
-        </div>
-
-        {/* ADMIN ACCESS */}
-
+        {/* ADMIN */}
         {user.uid === ADMIN_UID && (
+          <section className="mt-8 rounded-2xl border border-purple-500/20 bg-purple-500/5 p-6">
 
-          <div className="bg-cyan-400/5 border border-cyan-400/20 rounded-2xl p-8 mb-8">
-
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
 
               <div>
 
-                <p className="text-cyan-400 text-sm font-semibold uppercase tracking-wider">
+                <p className="text-sm text-purple-400">
                   Administrator
                 </p>
 
-                <h2 className="text-2xl font-bold mt-1">
-                  Admin Control Center
+                <h2 className="mt-1 text-2xl font-bold">
+                  Admin Dashboard
                 </h2>
 
-                <p className="text-slate-400 mt-2">
+                <p className="mt-2 text-sm text-slate-500">
                   You have administrator access to CyberGuard.
                 </p>
 
@@ -1045,61 +992,166 @@ export default function DashboardPage() {
 
               <a
                 href="/admin"
-                className="inline-block bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-6 py-3 rounded-lg transition"
+                className="rounded-lg bg-purple-500 px-5 py-3 text-center font-semibold text-white transition hover:bg-purple-400"
               >
-                Open Admin →
+                Open Admin Panel
               </a>
 
             </div>
 
-          </div>
-
+          </section>
         )}
 
-        {/* ACCOUNT ID */}
+        {/* ACCOUNT INFORMATION */}
+        <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <HeaderCard
+            icon="ℹ️"
+            title="Account Information"
+            description="Your CyberGuard account details."
+          />
 
-          <h2 className="text-xl font-bold mb-3">
-            Account Information
-          </h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
 
-          <p className="text-slate-400 text-sm mb-2">
-            Account ID
-          </p>
+            <InfoItem
+              title="Name"
+              value={user.displayName || "Not set"}
+            />
 
-          <p className="text-slate-500 text-sm break-all">
-            {user.uid}
-          </p>
+            <InfoItem
+              title="Email"
+              value={user.email || "Not available"}
+            />
 
-        </div>
+            <InfoItem
+              title="Account ID"
+              value={user.uid}
+            />
+
+            <InfoItem
+              title="Authentication"
+              value="Firebase Authentication"
+            />
+
+          </div>
+
+        </section>
 
         {/* FOOTER */}
+        <footer className="mt-12 border-t border-slate-800 py-8 text-center">
 
-        <div className="mt-10 text-center text-sm text-slate-600">
-          CyberGuard • Account Dashboard
-        </div>
+          <p className="text-sm text-slate-500">
+            © {new Date().getFullYear()} CyberGuard.
+            All rights reserved.
+          </p>
+
+          <p className="mt-2 text-xs text-slate-600">
+            Stay secure. Stay protected. 🛡️
+          </p>
+
+        </footer>
 
       </div>
     </main>
   );
 }
 
-/* STATUS CARD */
 
-function StatusCard({ icon, title, value }) {
+/* =========================
+   STATUS CARD
+========================= */
+
+function StatusCard({
+  icon,
+  title,
+  value,
+  description,
+}) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
 
-      <div className="text-3xl mb-4">
+      <div className="flex items-start justify-between">
+
+        <div>
+
+          <p className="text-sm text-slate-500">
+            {title}
+          </p>
+
+          <p className="mt-2 text-2xl font-bold">
+            {value}
+          </p>
+
+          <p className="mt-2 text-xs text-slate-500">
+            {description}
+          </p>
+
+        </div>
+
+        <span className="text-3xl">
+          {icon}
+        </span>
+
+      </div>
+
+    </div>
+  );
+}
+
+
+/* =========================
+   QUICK CARD
+========================= */
+
+function QuickCard({
+  icon,
+  title,
+  description,
+  href,
+}) {
+  return (
+    <a
+      href={href}
+      className="group rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl transition hover:-translate-y-1 hover:border-cyan-500/50"
+    >
+
+      <div className="text-3xl">
         {icon}
       </div>
 
-      <h3 className="text-lg font-semibold mb-2">
+      <h3 className="mt-4 text-lg font-bold group-hover:text-cyan-400">
         {title}
       </h3>
 
-      <p className="text-green-400">
+      <p className="mt-2 text-sm text-slate-500">
+        {description}
+      </p>
+
+      <div className="mt-5 text-sm font-semibold text-cyan-400">
+        Open →
+      </div>
+
+    </a>
+  );
+}
+
+
+/* =========================
+   INFO ITEM
+========================= */
+
+function InfoItem({
+  title,
+  value,
+}) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+
+      <p className="text-xs text-slate-500">
+        {title}
+      </p>
+
+      <p className="mt-2 break-all font-medium text-slate-200">
         {value}
       </p>
 
@@ -1107,95 +1159,35 @@ function StatusCard({ icon, title, value }) {
   );
 }
 
-/* QUICK CARD */
 
-function QuickCard({
-  href,
+/* =========================
+   HEADER CARD
+========================= */
+
+function HeaderCard({
   icon,
   title,
   description,
-  linkText,
 }) {
   return (
-    <a
-      href={href}
-      className="group bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-cyan-400 transition"
-    >
-      <div className="text-3xl mb-4">
+    <div className="flex items-start gap-4">
+
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-2xl">
         {icon}
       </div>
 
-      <h3 className="text-xl font-bold">
-        {title}
-      </h3>
+      <div>
 
-      <p className="text-slate-400 mt-2">
-        {description}
-      </p>
+        <h2 className="text-xl font-bold">
+          {title}
+        </h2>
 
-      <span className="inline-block mt-5 text-cyan-400 font-semibold group-hover:text-cyan-300">
-        {linkText}
-      </span>
-    </a>
-  );
-}
-
-/* INFO ITEM */
-
-function InfoItem({ label, value }) {
-  return (
-    <div>
-      <p className="text-slate-500 text-sm">
-        {label}
-      </p>
-
-      <p className="text-white mt-1 break-all">
-        {value || "Not available"}
-      </p>
-    </div>
-  );
-}
-
-/* HEADER CARD */
-
-function HeaderCard({ name, value }) {
-  const exists = Boolean(value);
-
-  return (
-    <div
-      className={`rounded-xl border p-5 ${
-        exists
-          ? "border-green-500/20 bg-green-500/5"
-          : "border-red-500/20 bg-red-500/5"
-      }`}
-    >
-      <div className="flex items-start gap-3">
-
-        <span className="text-xl">
-          {exists ? "✅" : "⚠️"}
-        </span>
-
-        <div className="min-w-0">
-
-          <p className="font-semibold break-words">
-            {name}
-          </p>
-
-          <p
-            className={`text-sm mt-2 break-words ${
-              exists
-                ? "text-green-400"
-                : "text-red-400"
-            }`}
-          >
-            {exists
-              ? value
-              : "Header not detected"}
-          </p>
-
-        </div>
+        <p className="mt-1 text-sm text-slate-500">
+          {description}
+        </p>
 
       </div>
+
     </div>
   );
 }
