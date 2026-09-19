@@ -7,6 +7,15 @@ import { auth } from "@/lib/firebase";
 
 const ADMIN_UID = "4p7XTqdcQqbr7otfruFMnemLDK43";
 
+const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
+  { href: "/services", label: "Services" },
+  { href: "/tools", label: "Tools" },
+  { href: "/blog", label: "Blog" },
+  { href: "/contact", label: "Contact" },
+];
+
 export default function Navbar() {
   const [user, setUser] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -33,89 +42,75 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-slate-950 border-b border-slate-800 text-white sticky top-0 z-50">
+    <nav className="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-md text-white">
 
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-5 md:px-6">
 
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-18">
 
-          {/* Logo */}
+          {/* LOGO */}
 
           <Link
             href="/"
             onClick={closeMenu}
-            className="text-2xl font-bold text-cyan-400"
+            className="flex items-center gap-3 group"
           >
-            CyberGuard
+            <div className="w-10 h-10 rounded-xl bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center text-xl group-hover:bg-cyan-400/20 transition">
+              🛡️
+            </div>
+
+            <div>
+              <div className="text-xl font-bold tracking-tight">
+                Cyber<span className="text-cyan-400">Guard</span>
+              </div>
+
+              <div className="hidden sm:block text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                Security Platform
+              </div>
+            </div>
           </Link>
 
-          {/* Desktop Navigation */}
+          {/* DESKTOP NAVIGATION */}
 
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-1">
 
-            <Link
-              href="/"
-              className="hover:text-cyan-400 transition"
-            >
-              Home
-            </Link>
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-cyan-400 hover:bg-cyan-400/5 transition"
+              >
+                {link.label}
+              </Link>
+            ))}
 
-            <Link
-              href="/about"
-              className="hover:text-cyan-400 transition"
-            >
-              About
-            </Link>
+          </div>
 
-            <Link
-              href="/services"
-              className="hover:text-cyan-400 transition"
-            >
-              Services
-            </Link>
+          {/* DESKTOP ACCOUNT */}
 
-            <Link
-              href="/tools"
-              className="hover:text-cyan-400 transition"
-            >
-              Tools
-            </Link>
-
-            <Link
-              href="/blog"
-              className="hover:text-cyan-400 transition"
-            >
-              Blog
-            </Link>
-
-            <Link
-              href="/contact"
-              className="hover:text-cyan-400 transition"
-            >
-              Contact
-            </Link>
+          <div className="hidden lg:flex items-center gap-3">
 
             {user ? (
               <>
                 <Link
                   href="/dashboard"
-                  className="hover:text-cyan-400 transition"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-cyan-400 hover:bg-cyan-400/5 transition"
                 >
-                  Dashboard
+                  📊 Dashboard
                 </Link>
 
                 {user.uid === ADMIN_UID && (
                   <Link
                     href="/admin"
-                    className="hover:text-cyan-400 transition"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-purple-300 hover:text-purple-200 hover:bg-purple-400/10 transition"
                   >
-                    Admin
+                    ⚙️ Admin
                   </Link>
                 )}
 
                 <button
                   onClick={handleLogout}
-                  className="bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded-lg transition"
+                  className="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white text-sm font-semibold transition"
                 >
                   Logout
                 </button>
@@ -124,112 +119,77 @@ export default function Navbar() {
               <>
                 <Link
                   href="/login"
-                  className="hover:text-cyan-400 transition"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:text-cyan-400 transition"
                 >
                   Login
                 </Link>
 
                 <Link
                   href="/signup"
-                  className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-4 py-2 rounded-lg transition"
+                  className="px-5 py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-sm font-bold transition shadow-lg shadow-cyan-500/10"
                 >
-                  Get Started
+                  Get Started →
                 </Link>
               </>
             )}
 
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* MOBILE MENU BUTTON */}
 
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden text-2xl"
-            aria-label="Toggle menu"
+            className="lg:hidden w-10 h-10 rounded-lg border border-slate-800 bg-slate-900 hover:border-cyan-400/40 flex items-center justify-center text-xl transition"
+            aria-label="Toggle navigation menu"
           >
             {menuOpen ? "✕" : "☰"}
           </button>
 
         </div>
 
-        {/* Mobile Navigation */}
+        {/* MOBILE NAVIGATION */}
 
         {menuOpen && (
-          <div className="md:hidden border-t border-slate-800 py-5">
+          <div className="lg:hidden border-t border-slate-800 py-5">
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
 
-              <Link
-                href="/"
-                onClick={closeMenu}
-                className="hover:text-cyan-400 transition"
-              >
-                Home
-              </Link>
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={closeMenu}
+                  className="px-4 py-3 rounded-lg text-slate-300 hover:text-cyan-400 hover:bg-cyan-400/5 transition font-medium"
+                >
+                  {link.label}
+                </Link>
+              ))}
 
-              <Link
-                href="/about"
-                onClick={closeMenu}
-                className="hover:text-cyan-400 transition"
-              >
-                About
-              </Link>
-
-              <Link
-                href="/services"
-                onClick={closeMenu}
-                className="hover:text-cyan-400 transition"
-              >
-                Services
-              </Link>
-
-              <Link
-                href="/tools"
-                onClick={closeMenu}
-                className="hover:text-cyan-400 transition"
-              >
-                🛡️ Security Tools
-              </Link>
-
-              <Link
-                href="/blog"
-                onClick={closeMenu}
-                className="hover:text-cyan-400 transition"
-              >
-                Blog
-              </Link>
-
-              <Link
-                href="/contact"
-                onClick={closeMenu}
-                className="hover:text-cyan-400 transition"
-              >
-                Contact
-              </Link>
+              <div className="border-t border-slate-800 my-3" />
 
               {user ? (
                 <>
                   <Link
                     href="/dashboard"
                     onClick={closeMenu}
-                    className="hover:text-cyan-400 transition"
+                    className="px-4 py-3 rounded-lg text-slate-300 hover:text-cyan-400 hover:bg-cyan-400/5 transition font-medium"
                   >
-                    Dashboard
+                    📊 Dashboard
                   </Link>
 
                   {user.uid === ADMIN_UID && (
                     <Link
                       href="/admin"
                       onClick={closeMenu}
-                      className="hover:text-cyan-400 transition"
+                      className="px-4 py-3 rounded-lg text-purple-300 hover:bg-purple-400/10 transition font-medium"
                     >
-                      Admin
+                      ⚙️ Admin Panel
                     </Link>
                   )}
 
                   <button
                     onClick={handleLogout}
-                    className="bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded-lg transition text-left"
+                    className="mt-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition font-semibold text-left"
                   >
                     Logout
                   </button>
@@ -239,7 +199,7 @@ export default function Navbar() {
                   <Link
                     href="/login"
                     onClick={closeMenu}
-                    className="hover:text-cyan-400 transition"
+                    className="px-4 py-3 rounded-lg text-slate-300 hover:text-cyan-400 hover:bg-cyan-400/5 transition font-medium"
                   >
                     Login
                   </Link>
@@ -247,9 +207,9 @@ export default function Navbar() {
                   <Link
                     href="/signup"
                     onClick={closeMenu}
-                    className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-4 py-2 rounded-lg transition text-center"
+                    className="mt-2 px-4 py-3 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-center font-bold transition"
                   >
-                    Get Started
+                    Get Started →
                   </Link>
                 </>
               )}

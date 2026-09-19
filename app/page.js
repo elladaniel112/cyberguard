@@ -1,287 +1,472 @@
+"use client";
+
 import Link from "next/link";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <main>
-      {/* HERO SECTION */}
-      <section className="grid-bg relative overflow-hidden">
-        <div className="mx-auto grid min-h-[80vh] max-w-7xl items-center px-5 py-20 md:grid-cols-2 md:gap-12">
+    <main className="min-h-screen bg-slate-950 text-white">
 
-          <div>
-            <p className="mb-4 font-semibold uppercase tracking-[0.2em] text-cyan-400">
-              Cybersecurity Solutions
-            </p>
+      {/* HERO */}
 
-            <h1 className="text-4xl font-bold leading-tight text-white md:text-6xl">
-              Protecting your
-              <span className="text-cyan-400"> digital world.</span>
+      <section className="relative overflow-hidden px-6 py-24 md:py-32">
+
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.12),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.08),transparent_35%)]" />
+
+        <div className="relative max-w-6xl mx-auto">
+
+          <div className="max-w-3xl">
+
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/5 px-4 py-2 text-sm text-cyan-400 mb-7">
+              <span>🛡️</span>
+              Cybersecurity for the modern web
+            </div>
+
+            <h1 className="text-5xl md:text-7xl font-bold leading-tight">
+              Protect Your{" "}
+              <span className="text-cyan-400">
+                Digital World
+              </span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-lg leading-8 text-slate-300">
-              CyberGuard helps businesses and individuals identify
-              vulnerabilities, secure their websites, and protect their
-              digital assets from cyber threats.
+            <p className="text-slate-400 text-lg md:text-xl leading-8 mt-7 max-w-2xl">
+              CyberGuard provides practical cybersecurity tools
+              and resources to help you understand, monitor,
+              and improve your digital security.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 mt-9">
+
+              <Link
+                href="/tools"
+                className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-7 py-4 rounded-xl transition text-center"
+              >
+                Start Security Scan →
+              </Link>
+
               <Link
                 href="/services"
-                className="rounded-lg bg-cyan-400 px-6 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
+                className="border border-slate-700 hover:border-cyan-400 hover:text-cyan-400 font-semibold px-7 py-4 rounded-xl transition text-center"
               >
                 Explore Services
               </Link>
 
-              <Link
-                href="/tools"
-                className="rounded-lg border border-cyan-400 px-6 py-3 font-semibold text-cyan-400 transition hover:bg-cyan-400 hover:text-slate-950"
-              >
-                Security Tools
-              </Link>
-
-              <Link
-                href="/contact"
-                className="rounded-lg border border-slate-600 px-6 py-3 font-semibold text-white transition hover:border-cyan-400"
-              >
-                Contact Us
-              </Link>
             </div>
+
           </div>
 
-          <div className="mt-14 flex justify-center md:mt-0">
-            <div className="rounded-3xl border border-cyan-400/30 bg-slate-900/70 p-10 shadow-2xl">
-              <div className="text-center">
-                <div className="text-7xl">🛡️</div>
+          {/* SECURITY CARD */}
 
-                <h2 className="mt-5 text-2xl font-bold text-white">
-                  CyberGuard
-                </h2>
+          <div className="mt-16 grid md:grid-cols-3 gap-5">
 
-                <p className="mt-2 text-slate-400">
-                  Security starts before the attack.
-                </p>
+            <SecurityCard
+              icon="🌐"
+              title="Website Scanner"
+              description="Check basic security protections and headers."
+            />
 
-                <div className="mt-6 flex justify-center gap-3 text-sm">
-                  <span className="rounded-full bg-cyan-400/10 px-4 py-2 text-cyan-400">
-                    Secure
-                  </span>
+            <SecurityCard
+              icon="🔐"
+              title="Password Security"
+              description="Understand basic password strength characteristics."
+            />
 
-                  <span className="rounded-full bg-cyan-400/10 px-4 py-2 text-cyan-400">
-                    Reliable
-                  </span>
-                </div>
-              </div>
-            </div>
+            <SecurityCard
+              icon="📊"
+              title="Security Reports"
+              description="Keep track of your website security scans."
+            />
+
           </div>
 
         </div>
       </section>
 
-      {/* ABOUT SECTION */}
-      <section className="mx-auto max-w-7xl px-5 py-24">
+      {/* STATS */}
 
-        <div className="max-w-2xl">
-          <p className="font-semibold uppercase tracking-widest text-cyan-400">
-            Why CyberGuard?
-          </p>
+      <section className="border-y border-slate-800 bg-slate-900/50 px-6 py-14">
 
-          <h2 className="mt-3 text-3xl font-bold text-white md:text-4xl">
-            Security built for the modern web.
-          </h2>
+        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
 
-          <p className="mt-5 leading-7 text-slate-400">
-            We help organizations discover weaknesses before attackers do.
-            From web security assessments to vulnerability testing,
-            CyberGuard provides practical cybersecurity solutions.
-          </p>
-        </div>
+          <Stat
+            number="24/7"
+            label="Security Awareness"
+          />
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+          <Stat
+            number="100%"
+            label="Web Based"
+          />
 
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-7 transition hover:-translate-y-1 hover:border-cyan-400">
-            <div className="text-3xl">🔍</div>
+          <Stat
+            number="6+"
+            label="Security Checks"
+          />
 
-            <h3 className="mt-4 text-xl font-semibold text-white">
-              Vulnerability Assessment
-            </h3>
-
-            <p className="mt-3 text-slate-400">
-              Identify security weaknesses before they become serious
-              problems.
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-7 transition hover:-translate-y-1 hover:border-cyan-400">
-            <div className="text-3xl">🌐</div>
-
-            <h3 className="mt-4 text-xl font-semibold text-white">
-              Web Security
-            </h3>
-
-            <p className="mt-3 text-slate-400">
-              Improve the security of websites and web applications.
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-7 transition hover:-translate-y-1 hover:border-cyan-400">
-            <div className="text-3xl">🛡️</div>
-
-            <h3 className="mt-4 text-xl font-semibold text-white">
-              Security Audits
-            </h3>
-
-            <p className="mt-3 text-slate-400">
-              Review systems and security practices to uncover potential
-              risks.
-            </p>
-          </div>
+          <Stat
+            number="1"
+            label="CyberGuard Platform"
+          />
 
         </div>
+
       </section>
 
-      {/* SECURITY TOOLS SECTION */}
-      <section className="border-y border-slate-800 bg-slate-950">
+      {/* FEATURED TOOLS */}
 
-        <div className="mx-auto max-w-7xl px-5 py-24">
+      <section className="px-6 py-24">
 
-          <div className="text-center">
+        <div className="max-w-6xl mx-auto">
 
-            <p className="font-semibold uppercase tracking-widest text-cyan-400">
-              CYBERGUARD TOOLS
+          <div className="text-center max-w-2xl mx-auto mb-14">
+
+            <p className="text-cyan-400 text-sm font-semibold uppercase tracking-widest">
+              Security Toolkit
             </p>
 
-            <h2 className="mt-3 text-3xl font-bold text-white md:text-4xl">
-              Free Security Tools
+            <h2 className="text-3xl md:text-5xl font-bold mt-3">
+              Tools Built for Digital Safety
             </h2>
 
-            <p className="mx-auto mt-5 max-w-2xl text-slate-400">
-              Use our simple cybersecurity tools to learn more about
-              passwords, IP addresses, and your everyday security habits.
+            <p className="text-slate-400 mt-5 leading-7">
+              Explore simple tools designed to help you
+              understand important areas of cybersecurity.
             </p>
 
           </div>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
+          <div className="grid md:grid-cols-3 gap-6">
 
-            {/* Password Tool */}
+            <ToolCard
+              icon="🌐"
+              title="Website Security Scanner"
+              description="Check HTTPS and common security headers on a website."
+              href="/tools"
+            />
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-7 transition hover:-translate-y-1 hover:border-cyan-400">
+            <ToolCard
+              icon="🔑"
+              title="Password Checker"
+              description="Check basic characteristics that contribute to password strength."
+              href="/tools"
+            />
 
-              <div className="text-4xl">
-                🔐
-              </div>
+            <ToolCard
+              icon="📍"
+              title="IP Address Checker"
+              description="View basic information associated with a public IP address."
+              href="/tools"
+            />
 
-              <h3 className="mt-5 text-xl font-bold text-white">
-                Password Strength
-              </h3>
+          </div>
 
-              <p className="mt-3 text-slate-400">
-                Check basic password characteristics and learn how to
-                create stronger passwords.
-              </p>
+        </div>
 
-              <Link
-                href="/tools"
-                className="mt-6 inline-block rounded-lg bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
-              >
-                Try Tool →
-              </Link>
+      </section>
 
-            </div>
+      {/* HOW IT WORKS */}
 
-            {/* IP Tool */}
+      <section className="px-6 py-24 bg-slate-900/40">
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-7 transition hover:-translate-y-1 hover:border-cyan-400">
+        <div className="max-w-6xl mx-auto">
 
-              <div className="text-4xl">
-                🌐
-              </div>
+          <div className="text-center mb-14">
 
-              <h3 className="mt-5 text-xl font-bold text-white">
-                IP Address Checker
-              </h3>
+            <p className="text-cyan-400 text-sm font-semibold uppercase tracking-widest">
+              Simple Process
+            </p>
 
-              <p className="mt-3 text-slate-400">
-                View basic public information associated with an IP
-                address.
-              </p>
+            <h2 className="text-3xl md:text-5xl font-bold mt-3">
+              Security Made Simple
+            </h2>
 
-              <Link
-                href="/tools"
-                className="mt-6 inline-block rounded-lg bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
-              >
-                Try Tool →
-              </Link>
+          </div>
 
-            </div>
+          <div className="grid md:grid-cols-3 gap-8">
 
-            {/* Checklist Tool */}
+            <ProcessStep
+              number="01"
+              icon="🔍"
+              title="Choose a Tool"
+              description="Select a security tool that matches what you want to check."
+            />
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-7 transition hover:-translate-y-1 hover:border-cyan-400">
+            <ProcessStep
+              number="02"
+              icon="🛡️"
+              title="Run Your Check"
+              description="Enter the required information and let CyberGuard perform the check."
+            />
 
-              <div className="text-4xl">
-                🛡️
-              </div>
+            <ProcessStep
+              number="03"
+              icon="📋"
+              title="Review Results"
+              description="Understand the results and use them to improve your digital security."
+            />
 
-              <h3 className="mt-5 text-xl font-bold text-white">
-                Security Checklist
-              </h3>
+          </div>
 
-              <p className="mt-3 text-slate-400">
-                Review your everyday security habits and calculate your
-                security score.
-              </p>
+        </div>
 
-              <Link
-                href="/tools"
-                className="mt-6 inline-block rounded-lg bg-cyan-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
-              >
-                Try Tool →
-              </Link>
+      </section>
+
+      {/* WHY CYBERGUARD */}
+
+      <section className="px-6 py-24">
+
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-14 items-center">
+
+          <div>
+
+            <p className="text-cyan-400 text-sm font-semibold uppercase tracking-widest">
+              Why CyberGuard
+            </p>
+
+            <h2 className="text-3xl md:text-5xl font-bold mt-3 leading-tight">
+              Understand Your Security.
+              <br />
+              Improve Your Protection.
+            </h2>
+
+            <p className="text-slate-400 leading-8 mt-6">
+              Cybersecurity can feel complicated. CyberGuard
+              focuses on presenting useful security information
+              in a simple and understandable way.
+            </p>
+
+            <div className="space-y-5 mt-8">
+
+              <Benefit
+                icon="✓"
+                title="Easy to Understand"
+                description="Security information is presented clearly."
+              />
+
+              <Benefit
+                icon="✓"
+                title="Practical Tools"
+                description="Use tools that help you explore common security areas."
+              />
+
+              <Benefit
+                icon="✓"
+                title="Scan History"
+                description="Logged-in users can keep track of their website scans."
+              />
+
+              <Benefit
+                icon="✓"
+                title="Security Resources"
+                description="Learn more through CyberGuard's cybersecurity articles."
+              />
 
             </div>
 
           </div>
 
-          <div className="mt-12 text-center">
+          {/* SECURITY VISUAL */}
+
+          <div className="relative">
+
+            <div className="absolute -inset-4 bg-cyan-400/10 blur-3xl rounded-full" />
+
+            <div className="relative bg-slate-900 border border-slate-800 rounded-3xl p-8">
+
+              <div className="flex items-center justify-between mb-8">
+
+                <div>
+                  <p className="text-slate-500 text-sm">
+                    Security Center
+                  </p>
+
+                  <h3 className="text-2xl font-bold mt-1">
+                    CyberGuard
+                  </h3>
+                </div>
+
+                <div className="w-12 h-12 rounded-xl bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center text-2xl">
+                  🛡️
+                </div>
+
+              </div>
+
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6">
+
+                <div className="flex items-center justify-between">
+
+                  <div>
+                    <p className="text-slate-500 text-sm">
+                      Security Status
+                    </p>
+
+                    <p className="text-green-400 text-2xl font-bold mt-2">
+                      Protected
+                    </p>
+                  </div>
+
+                  <div className="w-16 h-16 rounded-full border-4 border-green-400/30 flex items-center justify-center">
+                    <span className="text-green-400 text-xl">
+                      ✓
+                    </span>
+                  </div>
+
+                </div>
+
+                <div className="mt-7 space-y-3">
+
+                  <SecurityStatus
+                    label="HTTPS"
+                    status="Enabled"
+                  />
+
+                  <SecurityStatus
+                    label="Security Headers"
+                    status="Checked"
+                  />
+
+                  <SecurityStatus
+                    label="Security Tools"
+                    status="Available"
+                  />
+
+                  <SecurityStatus
+                    label="Scan Reports"
+                    status="Saved"
+                  />
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* SERVICES */}
+
+      <section className="px-6 py-24 bg-slate-900/40">
+
+        <div className="max-w-6xl mx-auto">
+
+          <div className="text-center max-w-2xl mx-auto mb-14">
+
+            <p className="text-cyan-400 text-sm font-semibold uppercase tracking-widest">
+              Cybersecurity Services
+            </p>
+
+            <h2 className="text-3xl md:text-5xl font-bold mt-3">
+              Security Solutions
+            </h2>
+
+            <p className="text-slate-400 mt-5">
+              Explore CyberGuard's cybersecurity-focused services.
+            </p>
+
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+
+            <ServiceCard
+              icon="🔎"
+              title="Security Assessment"
+              description="Identify basic security considerations and areas that may need attention."
+            />
+
+            <ServiceCard
+              icon="🌐"
+              title="Web Security"
+              description="Review common website security protections and configurations."
+            />
+
+            <ServiceCard
+              icon="🎓"
+              title="Security Awareness"
+              description="Learn practical cybersecurity concepts and safer digital habits."
+            />
+
+          </div>
+
+          <div className="text-center mt-10">
 
             <Link
-              href="/tools"
-              className="inline-block rounded-lg border border-cyan-400 px-7 py-3 font-semibold text-cyan-400 transition hover:bg-cyan-400 hover:text-slate-950"
+              href="/services"
+              className="inline-block border border-cyan-400 text-cyan-400 hover:bg-cyan-400 hover:text-slate-950 font-semibold px-6 py-3 rounded-lg transition"
             >
-              View All Security Tools
+              View All Services →
             </Link>
 
           </div>
 
         </div>
+
       </section>
 
-      {/* CTA SECTION */}
-      <section className="border-y border-slate-800 bg-[#091522]">
+      {/* BLOG CTA */}
 
-        <div className="mx-auto max-w-7xl px-5 py-20 text-center">
+      <section className="px-6 py-24">
 
-          <h2 className="text-3xl font-bold text-white md:text-4xl">
-            Ready to secure your digital world?
+        <div className="max-w-5xl mx-auto bg-gradient-to-r from-cyan-400/10 to-blue-500/10 border border-cyan-400/20 rounded-3xl p-8 md:p-14 text-center">
+
+          <div className="text-5xl mb-6">
+            📝
+          </div>
+
+          <h2 className="text-3xl md:text-5xl font-bold">
+            Learn More About Cybersecurity
           </h2>
 
-          <p className="mx-auto mt-4 max-w-xl text-slate-400">
-            Explore our cybersecurity services and learn how CyberGuard
-            can help protect your systems.
+          <p className="text-slate-400 max-w-2xl mx-auto mt-5 leading-7">
+            Read CyberGuard articles covering cybersecurity,
+            online safety, passwords, phishing, and other
+            digital security topics.
           </p>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
+          <Link
+            href="/blog"
+            className="inline-block mt-8 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-7 py-4 rounded-xl transition"
+          >
+            Read the Blog →
+          </Link>
+
+        </div>
+
+      </section>
+
+      {/* FINAL CTA */}
+
+      <section className="px-6 py-24 bg-slate-900">
+
+        <div className="max-w-4xl mx-auto text-center">
+
+          <div className="text-5xl mb-6">
+            🛡️
+          </div>
+
+          <h2 className="text-4xl md:text-6xl font-bold">
+            Ready to Check Your Security?
+          </h2>
+
+          <p className="text-slate-400 text-lg mt-6 max-w-2xl mx-auto">
+            Start with CyberGuard's security tools and
+            take a closer look at your digital protection.
+          </p>
+
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mt-9">
 
             <Link
-              href="/services"
-              className="rounded-lg bg-cyan-400 px-7 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
+              href="/tools"
+              className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-8 py-4 rounded-xl transition"
             >
-              View Our Services
+              Start a Security Scan
             </Link>
 
             <Link
               href="/contact"
-              className="rounded-lg border border-slate-600 px-7 py-3 font-semibold text-white transition hover:border-cyan-400"
+              className="border border-slate-700 hover:border-cyan-400 hover:text-cyan-400 font-semibold px-8 py-4 rounded-xl transition"
             >
               Contact CyberGuard
             </Link>
@@ -293,5 +478,185 @@ export default function Home() {
       </section>
 
     </main>
+  );
+}
+
+/* SECURITY CARD */
+
+function SecurityCard({ icon, title, description }) {
+  return (
+    <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 hover:border-cyan-400/40 transition">
+      <div className="text-3xl mb-4">
+        {icon}
+      </div>
+
+      <h3 className="text-xl font-bold">
+        {title}
+      </h3>
+
+      <p className="text-slate-400 mt-2 leading-6">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+/* STAT */
+
+function Stat({ number, label }) {
+  return (
+    <div className="text-center">
+      <p className="text-3xl md:text-4xl font-bold text-cyan-400">
+        {number}
+      </p>
+
+      <p className="text-slate-500 text-sm mt-2">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+/* TOOL CARD */
+
+function ToolCard({
+  icon,
+  title,
+  description,
+  href,
+}) {
+  return (
+    <Link
+      href={href}
+      className="group bg-slate-900 border border-slate-800 rounded-2xl p-7 hover:border-cyan-400 transition"
+    >
+      <div className="text-4xl mb-5">
+        {icon}
+      </div>
+
+      <h3 className="text-xl font-bold group-hover:text-cyan-400 transition">
+        {title}
+      </h3>
+
+      <p className="text-slate-400 mt-3 leading-7">
+        {description}
+      </p>
+
+      <span className="inline-block mt-6 text-cyan-400 font-semibold">
+        Open Tool →
+      </span>
+    </Link>
+  );
+}
+
+/* PROCESS */
+
+function ProcessStep({
+  number,
+  icon,
+  title,
+  description,
+}) {
+  return (
+    <div className="relative bg-slate-900 border border-slate-800 rounded-2xl p-7">
+
+      <div className="flex items-center justify-between mb-6">
+
+        <div className="text-4xl">
+          {icon}
+        </div>
+
+        <span className="text-slate-700 text-4xl font-bold">
+          {number}
+        </span>
+
+      </div>
+
+      <h3 className="text-xl font-bold">
+        {title}
+      </h3>
+
+      <p className="text-slate-400 mt-3 leading-7">
+        {description}
+      </p>
+
+    </div>
+  );
+}
+
+/* BENEFIT */
+
+function Benefit({
+  icon,
+  title,
+  description,
+}) {
+  return (
+    <div className="flex items-start gap-4">
+
+      <div className="w-8 h-8 rounded-full bg-green-400/10 border border-green-400/20 text-green-400 flex items-center justify-center shrink-0">
+        {icon}
+      </div>
+
+      <div>
+
+        <h3 className="font-bold">
+          {title}
+        </h3>
+
+        <p className="text-slate-400 text-sm mt-1">
+          {description}
+        </p>
+
+      </div>
+
+    </div>
+  );
+}
+
+/* SECURITY STATUS */
+
+function SecurityStatus({
+  label,
+  status,
+}) {
+  return (
+    <div className="flex items-center justify-between bg-slate-900 rounded-lg p-3">
+
+      <span className="text-slate-400 text-sm">
+        {label}
+      </span>
+
+      <span className="text-green-400 text-sm font-semibold">
+        ✓ {status}
+      </span>
+
+    </div>
+  );
+}
+
+/* SERVICE CARD */
+
+function ServiceCard({
+  icon,
+  title,
+  description,
+}) {
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-7 hover:border-cyan-400/40 transition">
+
+      <div className="text-4xl mb-5">
+        {icon}
+      </div>
+
+      <h3 className="text-xl font-bold">
+        {title}
+      </h3>
+
+      <p className="text-slate-400 mt-3 leading-7">
+        {description}
+      </p>
+
+    </div>
   );
 }
