@@ -188,8 +188,8 @@ export default function ToolsPage() {
       setScanResult(result);
 
       /*
-       * Save scan history only when
-       * the user is logged in.
+       * Save detailed scan history
+       * when the user is logged in.
        */
 
       if (user && result.success) {
@@ -199,16 +199,39 @@ export default function ToolsPage() {
             {
               userId: user.uid,
               userEmail: user.email || "",
-              website: result.target?.hostname || "",
-              url: result.target?.url || website.trim(),
+
+              website:
+                result.target?.hostname || "",
+
+              url:
+                result.target?.url ||
+                website.trim(),
+
               score: result.score || 0,
+
               status: "completed",
+
+              protocol:
+                result.target?.protocol || "",
+
+              httpStatus:
+                result.response?.status || null,
+
+              httpStatusText:
+                result.response?.statusText || "",
+
+              checks:
+                result.checks || [],
+
+              securityHeaders:
+                result.securityHeaders || {},
+
               createdAt: serverTimestamp(),
             }
           );
 
           setScanSaved(
-            "Scan saved to your account history. ✅"
+            "Detailed scan report saved to your account history. ✅"
           );
         } catch (saveError) {
           console.error(
@@ -262,13 +285,11 @@ export default function ToolsPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white px-6 py-20">
-
       <div className="max-w-5xl mx-auto">
 
         {/* PAGE HEADER */}
 
         <div className="text-center mb-12">
-
           <p className="text-cyan-400 font-semibold mb-3">
             CYBERGUARD TOOLS
           </p>
@@ -293,7 +314,6 @@ export default function ToolsPage() {
               🔐 Logged in as {user.email}
             </p>
           )}
-
         </div>
 
         {/* WEBSITE SECURITY SCANNER */}
@@ -301,13 +321,11 @@ export default function ToolsPage() {
         <section className="bg-slate-900 border border-cyan-400/30 rounded-2xl p-8 mb-10 shadow-xl">
 
           <div className="flex items-center gap-4 mb-3">
-
             <div className="text-4xl">
               🌐
             </div>
 
             <div>
-
               <h2 className="text-2xl font-bold">
                 Website Security Scanner
               </h2>
@@ -315,13 +333,10 @@ export default function ToolsPage() {
               <p className="text-slate-400">
                 Check basic security protections on a website.
               </p>
-
             </div>
-
           </div>
 
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-
             <input
               type="text"
               value={website}
@@ -341,7 +356,6 @@ export default function ToolsPage() {
                 ? "Scanning..."
                 : "Scan Website"}
             </button>
-
           </div>
 
           <p className="text-slate-500 text-xs mt-4">
@@ -375,7 +389,6 @@ export default function ToolsPage() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
 
                   <div>
-
                     <p className="text-slate-500 text-sm">
                       Security Score
                     </p>
@@ -387,19 +400,15 @@ export default function ToolsPage() {
                     <p className="text-slate-400 mt-2 break-all">
                       {scanResult.target?.hostname}
                     </p>
-
                   </div>
 
                   <div className="w-32 h-32 rounded-full border-8 border-cyan-400/20 flex items-center justify-center">
-
                     <span className="text-2xl font-bold">
                       {scanResult.score}%
                     </span>
-
                   </div>
 
                 </div>
-
               </div>
 
               {/* BASIC INFORMATION */}
@@ -430,10 +439,43 @@ export default function ToolsPage() {
 
               </div>
 
+              {/* SECURITY CHECK SUMMARY */}
+
+              <div className="grid sm:grid-cols-2 gap-4 mb-6">
+
+                <div className="bg-green-500/5 border border-green-500/20 rounded-xl p-5">
+                  <p className="text-slate-400 text-sm">
+                    Passed Checks
+                  </p>
+
+                  <p className="text-3xl font-bold text-green-400 mt-2">
+                    {
+                      scanResult.checks?.filter(
+                        (check) => check.passed
+                      ).length || 0
+                    }
+                  </p>
+                </div>
+
+                <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-5">
+                  <p className="text-slate-400 text-sm">
+                    Failed Checks
+                  </p>
+
+                  <p className="text-3xl font-bold text-red-400 mt-2">
+                    {
+                      scanResult.checks?.filter(
+                        (check) => !check.passed
+                      ).length || 0
+                    }
+                  </p>
+                </div>
+
+              </div>
+
               {/* SECURITY CHECKS */}
 
               <div>
-
                 <h3 className="text-xl font-bold mb-4">
                   Security Checks
                 </h3>
@@ -450,7 +492,6 @@ export default function ToolsPage() {
                             : "border-red-500/20 bg-red-500/5"
                         }`}
                       >
-
                         <div className="flex items-start gap-4">
 
                           <div className="text-2xl">
@@ -459,23 +500,98 @@ export default function ToolsPage() {
                               : "⚠️"}
                           </div>
 
-                          <div>
+                          <div className="flex-1">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
 
-                            <h4 className="font-semibold">
-                              {check.name}
-                            </h4>
+                              <h4 className="font-semibold">
+                                {check.name}
+                              </h4>
 
-                            <p className="text-slate-400 text-sm mt-1">
+                              <span
+                                className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                                  check.passed
+                                    ? "bg-green-400/10 text-green-400"
+                                    : "bg-red-400/10 text-red-400"
+                                }`}
+                              >
+                                {check.passed
+                                  ? "PASSED"
+                                  : "NEEDS ATTENTION"}
+                              </span>
+
+                            </div>
+
+                            <p className="text-slate-400 text-sm mt-2">
                               {check.description}
                             </p>
 
                           </div>
 
                         </div>
-
                       </div>
                     )
                   )}
+
+                </div>
+              </div>
+
+              {/* SECURITY HEADERS */}
+
+              <div className="mt-8">
+
+                <h3 className="text-xl font-bold mb-4">
+                  Security Headers
+                </h3>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+
+                  <HeaderCard
+                    name="Strict-Transport-Security"
+                    value={
+                      scanResult.securityHeaders
+                        ?.strictTransportSecurity
+                    }
+                  />
+
+                  <HeaderCard
+                    name="Content-Security-Policy"
+                    value={
+                      scanResult.securityHeaders
+                        ?.contentSecurityPolicy
+                    }
+                  />
+
+                  <HeaderCard
+                    name="X-Frame-Options"
+                    value={
+                      scanResult.securityHeaders
+                        ?.xFrameOptions
+                    }
+                  />
+
+                  <HeaderCard
+                    name="X-Content-Type-Options"
+                    value={
+                      scanResult.securityHeaders
+                        ?.xContentTypeOptions
+                    }
+                  />
+
+                  <HeaderCard
+                    name="Referrer-Policy"
+                    value={
+                      scanResult.securityHeaders
+                        ?.referrerPolicy
+                    }
+                  />
+
+                  <HeaderCard
+                    name="Permissions-Policy"
+                    value={
+                      scanResult.securityHeaders
+                        ?.permissionsPolicy
+                    }
+                  />
 
                 </div>
 
@@ -770,15 +886,15 @@ export default function ToolsPage() {
         </section>
 
       </div>
-
     </main>
   );
 }
 
+/* INFO CARD */
+
 function InfoCard({ title, value }) {
   return (
     <div className="bg-slate-950 border border-slate-800 rounded-xl p-5">
-
       <p className="text-sm text-slate-500 mb-2">
         {title}
       </p>
@@ -786,7 +902,48 @@ function InfoCard({ title, value }) {
       <p className="font-semibold break-words">
         {value || "Not available"}
       </p>
+    </div>
+  );
+}
 
+/* SECURITY HEADER CARD */
+
+function HeaderCard({ name, value }) {
+  const exists = Boolean(value);
+
+  return (
+    <div
+      className={`rounded-xl border p-5 ${
+        exists
+          ? "border-green-500/20 bg-green-500/5"
+          : "border-red-500/20 bg-red-500/5"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+
+        <span className="text-xl">
+          {exists ? "✅" : "⚠️"}
+        </span>
+
+        <div className="min-w-0">
+          <p className="font-semibold break-words">
+            {name}
+          </p>
+
+          <p
+            className={`text-sm mt-2 break-words ${
+              exists
+                ? "text-green-400"
+                : "text-red-400"
+            }`}
+          >
+            {exists
+              ? value
+              : "Header not detected"}
+          </p>
+        </div>
+
+      </div>
     </div>
   );
 }
