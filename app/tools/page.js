@@ -1,19 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
+import { onAuthStateChanged } from "firebase/auth";
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+} from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 
 export default function ToolsPage() {
-  // Password Checker
+  const [user, setUser] = useState(null);
+
   const [password, setPassword] = useState("");
 
-  // IP Checker
   const [ip, setIp] = useState("");
   const [ipInfo, setIpInfo] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [ipLoading, setIpLoading] = useState(false);
+  const [ipError, setIpError] = useState("");
 
-  // Security Checklist
+  const [website, setWebsite] = useState("");
+  const [scanResult, setScanResult] = useState(null);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanError, setScanError] = useState("");
+  const [scanSaved, setScanSaved] = useState("");
+
   const [securityChecks, setSecurityChecks] = useState([
     {
       id: 1,
@@ -47,13 +59,28 @@ export default function ToolsPage() {
     },
   ]);
 
-  // Password Strength
+  /* AUTHENTICATION */
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (currentUser) => {
+        setUser(currentUser);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  /* PASSWORD CHECKER */
+
   const getStrength = () => {
     if (!password) {
       return {
         label: "Enter a password",
         score: 0,
-        message: "Type a password to check its strength.",
+        message:
+          "Type a password to check its strength.",
       };
     }
 
@@ -94,24 +121,27 @@ export default function ToolsPage() {
 
   const strength = getStrength();
 
-  // IP Checker
+  /* IP CHECKER */
+
   const checkIP = async () => {
     if (!ip.trim()) {
-      setError("Please enter an IP address.");
+      setIpError("Please enter an IP address.");
       return;
     }
 
-    setLoading(true);
-    setError("");
+    setIpLoading(true);
+    setIpError("");
     setIpInfo(null);
 
     try {
       const response = await axios.get(
-        `https://ipwho.is/${encodeURIComponent(ip.trim())}`
+        `https://ipwho.is/${encodeURIComponent(
+          ip.trim()
+        )}`
       );
 
       if (!response.data.success) {
-        setError(
+        setIpError(
           response.data.message ||
             "Unable to find information."
         );
@@ -119,37 +149,123 @@ export default function ToolsPage() {
       }
 
       setIpInfo(response.data);
-    } catch (err) {
-      setError(
+    } catch (error) {
+      console.error("IP checker error:", error);
+
+      setIpError(
         "Unable to check this IP address. Please try again."
       );
     } finally {
-      setLoading(false);
+      setIpLoading(false);
     }
   };
 
-  // Security Checklist
+  /* WEBSITE SECURITY SCANNER */
+
+  const scanWebsite = async () => {
+    if (!website.trim()) {
+      setScanError(
+        "Please enter a website URL."
+      );
+      return;
+    }
+
+    setScanLoading(true);
+    setScanError("");
+    setScanSaved("");
+    setScanResult(null);
+
+    try {
+      const response = await axios.post(
+        "/api/scanner",
+        {
+          url: website.trim(),
+        }
+      );
+
+      const result = response.data;
+
+      setScanResult(result);
+
+      /*
+       * Save scan history only when
+       * the user is logged in.
+       */
+
+      if (user && result.success) {
+        try {
+          await addDoc(
+            collection(db, "scanHistory"),
+            {
+              userId: user.uid,
+              userEmail: user.email || "",
+              website: result.target?.hostname || "",
+              url: result.target?.url || website.trim(),
+              score: result.score || 0,
+              status: "completed",
+              createdAt: serverTimestamp(),
+            }
+          );
+
+          setScanSaved(
+            "Scan saved to your account history. ✅"
+          );
+        } catch (saveError) {
+          console.error(
+            "Error saving scan history:",
+            saveError
+          );
+
+          setScanSaved(
+            "Scan completed, but the history could not be saved."
+          );
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Website scanner error:",
+        error
+      );
+
+      const message =
+        error.response?.data?.error ||
+        "Unable to scan this website. Please try again.";
+
+      setScanError(message);
+    } finally {
+      setScanLoading(false);
+    }
+  };
+
+  /* SECURITY CHECKLIST */
+
   const toggleSecurityCheck = (id) => {
     setSecurityChecks((current) =>
       current.map((item) =>
         item.id === id
-          ? { ...item, checked: !item.checked }
+          ? {
+              ...item,
+              checked: !item.checked,
+            }
           : item
       )
     );
   };
 
   const securityScore = Math.round(
-    (securityChecks.filter((item) => item.checked).length /
+    (securityChecks.filter(
+      (item) => item.checked
+    ).length /
       securityChecks.length) *
       100
   );
 
   return (
     <main className="min-h-screen bg-slate-950 text-white px-6 py-20">
+
       <div className="max-w-5xl mx-auto">
 
-        {/* Header */}
+        {/* PAGE HEADER */}
 
         <div className="text-center mb-12">
 
@@ -162,13 +278,215 @@ export default function ToolsPage() {
           </h1>
 
           <p className="text-slate-400 max-w-2xl mx-auto">
-            Simple cybersecurity tools to help you understand
-            and improve your digital security.
+            Simple cybersecurity tools to help you
+            understand and improve your digital security.
           </p>
+
+          {!user && (
+            <p className="text-slate-500 text-sm mt-4">
+              Log in to save your website scan history.
+            </p>
+          )}
+
+          {user && (
+            <p className="text-green-400 text-sm mt-4">
+              🔐 Logged in as {user.email}
+            </p>
+          )}
 
         </div>
 
-        {/* Password Strength Checker */}
+        {/* WEBSITE SECURITY SCANNER */}
+
+        <section className="bg-slate-900 border border-cyan-400/30 rounded-2xl p-8 mb-10 shadow-xl">
+
+          <div className="flex items-center gap-4 mb-3">
+
+            <div className="text-4xl">
+              🌐
+            </div>
+
+            <div>
+
+              <h2 className="text-2xl font-bold">
+                Website Security Scanner
+              </h2>
+
+              <p className="text-slate-400">
+                Check basic security protections on a website.
+              </p>
+
+            </div>
+
+          </div>
+
+          <div className="mt-6 flex flex-col sm:flex-row gap-3">
+
+            <input
+              type="text"
+              value={website}
+              onChange={(e) =>
+                setWebsite(e.target.value)
+              }
+              placeholder="https://example.com"
+              className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-4 outline-none focus:border-cyan-400 transition"
+            />
+
+            <button
+              onClick={scanWebsite}
+              disabled={scanLoading}
+              className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-7 py-4 rounded-lg transition disabled:opacity-50"
+            >
+              {scanLoading
+                ? "Scanning..."
+                : "Scan Website"}
+            </button>
+
+          </div>
+
+          <p className="text-slate-500 text-xs mt-4">
+            Only scan websites you own or have permission
+            to assess.
+          </p>
+
+          {scanError && (
+            <div className="mt-6 bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+              <p className="text-red-400">
+                {scanError}
+              </p>
+            </div>
+          )}
+
+          {scanSaved && (
+            <div className="mt-6 bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+              <p className="text-green-400">
+                {scanSaved}
+              </p>
+            </div>
+          )}
+
+          {scanResult && (
+            <div className="mt-8">
+
+              {/* SCORE */}
+
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 mb-6">
+
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+
+                  <div>
+
+                    <p className="text-slate-500 text-sm">
+                      Security Score
+                    </p>
+
+                    <p className="text-5xl font-bold text-cyan-400 mt-2">
+                      {scanResult.score}%
+                    </p>
+
+                    <p className="text-slate-400 mt-2 break-all">
+                      {scanResult.target?.hostname}
+                    </p>
+
+                  </div>
+
+                  <div className="w-32 h-32 rounded-full border-8 border-cyan-400/20 flex items-center justify-center">
+
+                    <span className="text-2xl font-bold">
+                      {scanResult.score}%
+                    </span>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* BASIC INFORMATION */}
+
+              <div className="grid sm:grid-cols-3 gap-4 mb-6">
+
+                <InfoCard
+                  title="Protocol"
+                  value={
+                    scanResult.target?.protocol
+                  }
+                />
+
+                <InfoCard
+                  title="HTTP Status"
+                  value={`${scanResult.response?.status} ${
+                    scanResult.response?.statusText ||
+                    ""
+                  }`}
+                />
+
+                <InfoCard
+                  title="Host"
+                  value={
+                    scanResult.target?.hostname
+                  }
+                />
+
+              </div>
+
+              {/* SECURITY CHECKS */}
+
+              <div>
+
+                <h3 className="text-xl font-bold mb-4">
+                  Security Checks
+                </h3>
+
+                <div className="space-y-3">
+
+                  {scanResult.checks?.map(
+                    (check) => (
+                      <div
+                        key={check.name}
+                        className={`rounded-xl border p-5 ${
+                          check.passed
+                            ? "border-green-500/20 bg-green-500/5"
+                            : "border-red-500/20 bg-red-500/5"
+                        }`}
+                      >
+
+                        <div className="flex items-start gap-4">
+
+                          <div className="text-2xl">
+                            {check.passed
+                              ? "✅"
+                              : "⚠️"}
+                          </div>
+
+                          <div>
+
+                            <h4 className="font-semibold">
+                              {check.name}
+                            </h4>
+
+                            <p className="text-slate-400 text-sm mt-1">
+                              {check.description}
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+                    )
+                  )}
+
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+        </section>
+
+        {/* PASSWORD STRENGTH */}
 
         <section className="max-w-2xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-10">
 
@@ -209,7 +527,10 @@ export default function ToolsPage() {
               <div
                 className="h-full bg-cyan-400 transition-all duration-300"
                 style={{
-                  width: `${(strength.score / 6) * 100}%`,
+                  width: `${
+                    (strength.score / 6) *
+                    100
+                  }%`,
                 }}
               />
 
@@ -258,7 +579,9 @@ export default function ToolsPage() {
               </li>
 
               <li>
-                {/[^A-Za-z0-9]/.test(password)
+                {/[^A-Za-z0-9]/.test(
+                  password
+                )
                   ? "✅"
                   : "❌"}{" "}
                 Special character
@@ -270,7 +593,7 @@ export default function ToolsPage() {
 
         </section>
 
-        {/* IP Address Checker */}
+        {/* IP CHECKER */}
 
         <section className="max-w-2xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-10">
 
@@ -297,19 +620,19 @@ export default function ToolsPage() {
 
             <button
               onClick={checkIP}
-              disabled={loading}
+              disabled={ipLoading}
               className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold px-6 py-4 rounded-lg transition disabled:opacity-50"
             >
-              {loading
+              {ipLoading
                 ? "Checking..."
                 : "Check IP"}
             </button>
 
           </div>
 
-          {error && (
+          {ipError && (
             <p className="text-red-400 mt-5">
-              {error}
+              {ipError}
             </p>
           )}
 
@@ -361,7 +684,7 @@ export default function ToolsPage() {
 
         </section>
 
-        {/* Security Checklist */}
+        {/* SECURITY CHECKLIST */}
 
         <section className="max-w-2xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-8">
 
@@ -373,8 +696,6 @@ export default function ToolsPage() {
             Check the security practices you currently
             follow.
           </p>
-
-          {/* Security Score */}
 
           <div className="mb-8">
 
@@ -403,52 +724,53 @@ export default function ToolsPage() {
 
           </div>
 
-          {/* Checklist Items */}
-
           <div className="space-y-4">
 
-            {securityChecks.map((item) => (
-              <label
-                key={item.id}
-                className="flex items-center gap-4 bg-slate-950 border border-slate-800 rounded-xl p-4 cursor-pointer hover:border-cyan-400 transition"
-              >
-
-                <input
-                  type="checkbox"
-                  checked={item.checked}
-                  onChange={() =>
-                    toggleSecurityCheck(item.id)
-                  }
-                  className="w-5 h-5 accent-cyan-400"
-                />
-
-                <span
-                  className={
-                    item.checked
-                      ? "text-white"
-                      : "text-slate-400"
-                  }
+            {securityChecks.map(
+              (item) => (
+                <label
+                  key={item.id}
+                  className="flex items-center gap-4 bg-slate-950 border border-slate-800 rounded-xl p-4 cursor-pointer hover:border-cyan-400 transition"
                 >
-                  {item.text}
-                </span>
 
-              </label>
-            ))}
+                  <input
+                    type="checkbox"
+                    checked={item.checked}
+                    onChange={() =>
+                      toggleSecurityCheck(
+                        item.id
+                      )
+                    }
+                    className="w-5 h-5 accent-cyan-400"
+                  />
+
+                  <span
+                    className={
+                      item.checked
+                        ? "text-white"
+                        : "text-slate-400"
+                    }
+                  >
+                    {item.text}
+                  </span>
+
+                </label>
+              )
+            )}
 
           </div>
 
-          {/* Completed Message */}
-
           {securityScore === 100 && (
             <div className="mt-6 bg-green-500/10 border border-green-500/30 rounded-xl p-5 text-green-400">
-              🎉 Excellent! You completed the entire
-              security checklist.
+              🎉 Excellent! You completed the
+              entire security checklist.
             </div>
           )}
 
         </section>
 
       </div>
+
     </main>
   );
 }
