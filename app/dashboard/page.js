@@ -1,19 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import {
   onAuthStateChanged,
   updateProfile,
   sendPasswordResetEmail,
   signOut,
 } from "firebase/auth";
+
 import {
+  addDoc,
   collection,
   getDocs,
   orderBy,
   query,
+  serverTimestamp,
   where,
 } from "firebase/firestore";
+
 import { auth, db } from "@/lib/firebase";
 
 const ADMIN_UID = "4p7XTqdcQqbr7otfruFMnemLDK43";
@@ -29,6 +34,7 @@ export default function DashboardPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  // SCAN HISTORY
   const [scanHistory, setScanHistory] = useState([]);
   const [scanLoading, setScanLoading] = useState(false);
   const [selectedScan, setSelectedScan] = useState(null);
@@ -38,26 +44,71 @@ export default function DashboardPage() {
   const [vpnServer, setVpnServer] = useState("Nigeria");
   const [vpnLoading, setVpnLoading] = useState(false);
 
+  // ACTIVITY LOG
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+
+  // ==========================================
+  // ACTIVITY LOGGER
+  // ==========================================
+
+  const logActivity = async (
+    userId,
+    action,
+    details = ""
+  ) => {
+    if (!userId) {
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "activityLogs"), {
+        userId,
+        action,
+        details,
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Activity log error:", error);
+    }
+  };
+
+  // ==========================================
   // AUTHENTICATION
+  // ==========================================
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setName(currentUser.displayName || "");
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (currentUser) => {
+        if (currentUser) {
+          setUser(currentUser);
+          setName(currentUser.displayName || "");
 
-        await loadScanHistory(currentUser.uid);
-      } else {
-        setUser(null);
-        window.location.href = "/login";
+          await loadScanHistory(currentUser.uid);
+          await loadActivityLogs(currentUser.uid);
+
+          await logActivity(
+            currentUser.uid,
+            "Dashboard Access",
+            "User opened the CyberGuard dashboard."
+          );
+        } else {
+          setUser(null);
+          window.location.href = "/login";
+        }
+
+        setLoading(false);
       }
-
-      setLoading(false);
-    });
+    );
 
     return () => unsubscribe();
   }, []);
 
+  // ==========================================
   // LOAD SCAN HISTORY
+  // ==========================================
+
   const loadScanHistory = async (userId) => {
     try {
       setScanLoading(true);
@@ -77,13 +128,70 @@ export default function DashboardPage() {
 
       setScanHistory(scans);
     } catch (error) {
-      console.error("Scan history error:", error);
+      console.error(
+        "Scan history error:",
+        error
+      );
     } finally {
       setScanLoading(false);
     }
   };
 
+  // ==========================================
+  // LOAD ACTIVITY LOGS
+  // ==========================================
+
+  const loadActivityLogs = async (userId) => {
+    try {
+      setActivityLoading(true);
+
+      const activityQuery = query(
+        collection(db, "activityLogs"),
+        where("userId", "==", userId)
+      );
+
+      const snapshot = await getDocs(activityQuery);
+
+      const logs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      logs.sort((a, b) => {
+        const getTime = (item) => {
+          if (!item.createdAt) {
+            return 0;
+          }
+
+          if (item.createdAt.toDate) {
+            return item.createdAt.toDate().getTime();
+          }
+
+          if (item.createdAt.seconds) {
+            return item.createdAt.seconds * 1000;
+          }
+
+          return 0;
+        };
+
+        return getTime(b) - getTime(a);
+      });
+
+      setActivityLogs(logs);
+    } catch (error) {
+      console.error(
+        "Activity history error:",
+        error
+      );
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  // ==========================================
   // UPDATE PROFILE NAME
+  // ==========================================
+
   const handleUpdateName = async (e) => {
     e.preventDefault();
 
@@ -101,74 +209,134 @@ export default function DashboardPage() {
       const currentUser = auth.currentUser;
 
       if (!currentUser) {
-        setError("Your session has expired. Please log in again.");
+        setError(
+          "Your session has expired. Please log in again."
+        );
         return;
       }
 
+      const newName = name.trim();
+
       await updateProfile(currentUser, {
-        displayName: name.trim(),
+        displayName: newName,
       });
 
       await currentUser.reload();
 
       setUser(auth.currentUser);
 
-      setMessage("Profile updated successfully! 🎉");
+      await logActivity(
+        currentUser.uid,
+        "Profile Updated",
+        `Display name changed to ${newName}.`
+      );
+
+      await loadActivityLogs(currentUser.uid);
+
+      setMessage(
+        "Profile updated successfully! 🎉"
+      );
     } catch (error) {
-      console.error("Profile update error:", error);
+      console.error(
+        "Profile update error:",
+        error
+      );
 
       setError(
-        error?.message || "Unable to update your profile."
+        error?.message ||
+          "Unable to update your profile."
       );
     } finally {
       setSaving(false);
     }
   };
 
+  // ==========================================
   // PASSWORD RESET
+  // ==========================================
+
   const handlePasswordReset = async () => {
     setMessage("");
     setError("");
 
     if (!user?.email) {
-      setError("No email address is associated with this account.");
+      setError(
+        "No email address is associated with this account."
+      );
       return;
     }
 
     try {
       setResetting(true);
 
-      await sendPasswordResetEmail(auth, user.email);
+      await sendPasswordResetEmail(
+        auth,
+        user.email
+      );
+
+      await logActivity(
+        user.uid,
+        "Password Reset Requested",
+        "A password reset email was requested."
+      );
+
+      await loadActivityLogs(user.uid);
 
       setMessage(
         "Password reset email sent! Check your inbox. 📧"
       );
     } catch (error) {
-      console.error("Password reset error:", error);
+      console.error(
+        "Password reset error:",
+        error
+      );
 
-      setError("Unable to send password reset email.");
+      setError(
+        "Unable to send password reset email."
+      );
     } finally {
       setResetting(false);
     }
   };
 
+  // ==========================================
   // SIGN OUT
+  // ==========================================
+
   const handleLogout = async () => {
     try {
       setError("");
       setMessage("");
 
+      const currentUser = auth.currentUser;
+
+      if (currentUser) {
+        await logActivity(
+          currentUser.uid,
+          "Signed Out",
+          "User signed out of CyberGuard."
+        );
+      }
+
       await signOut(auth);
 
       window.location.href = "/login";
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error(
+        "Logout error:",
+        error
+      );
 
-      setError("Unable to sign out. Please try again.");
+      setError(
+        "Unable to sign out. Please try again."
+      );
     }
   };
 
+  // ==========================================
   // VPN CONNECT / DISCONNECT
+  // ==========================================
+
   const handleVpnToggle = async () => {
     try {
       setVpnLoading(true);
@@ -177,15 +345,38 @@ export default function DashboardPage() {
         setTimeout(resolve, 1200)
       );
 
-      setVpnConnected((current) => !current);
+      const newConnectionState =
+        !vpnConnected;
+
+      setVpnConnected(newConnectionState);
+
+      if (user) {
+        await logActivity(
+          user.uid,
+          newConnectionState
+            ? "VPN Connected"
+            : "VPN Disconnected",
+          newConnectionState
+            ? `VPN connection selected: ${vpnServer}.`
+            : `VPN connection to ${vpnServer} was disconnected.`
+        );
+
+        await loadActivityLogs(user.uid);
+      }
     } catch (error) {
-      console.error("VPN error:", error);
+      console.error(
+        "VPN error:",
+        error
+      );
     } finally {
       setVpnLoading(false);
     }
   };
 
+  // ==========================================
   // SCAN DATE
+  // ==========================================
+
   const getScanDate = (scan) => {
     if (!scan?.createdAt) {
       return "Unknown date";
@@ -193,7 +384,9 @@ export default function DashboardPage() {
 
     try {
       if (scan.createdAt.toDate) {
-        return scan.createdAt.toDate().toLocaleString();
+        return scan.createdAt
+          .toDate()
+          .toLocaleString();
       }
 
       if (scan.createdAt.seconds) {
@@ -202,13 +395,102 @@ export default function DashboardPage() {
         ).toLocaleString();
       }
 
-      return new Date(scan.createdAt).toLocaleString();
+      return new Date(
+        scan.createdAt
+      ).toLocaleString();
     } catch {
       return "Unknown date";
     }
   };
 
+  // ==========================================
+  // ACTIVITY DATE
+  // ==========================================
+
+  const getActivityDate = (activity) => {
+    if (!activity?.createdAt) {
+      return "Just now";
+    }
+
+    try {
+      if (activity.createdAt.toDate) {
+        return activity.createdAt
+          .toDate()
+          .toLocaleString();
+      }
+
+      if (activity.createdAt.seconds) {
+        return new Date(
+          activity.createdAt.seconds * 1000
+        ).toLocaleString();
+      }
+
+      return new Date(
+        activity.createdAt
+      ).toLocaleString();
+    } catch {
+      return "Unknown date";
+    }
+  };
+
+  // ==========================================
+  // ACTIVITY ICON
+  // ==========================================
+
+  const getActivityIcon = (action) => {
+    if (!action) {
+      return "🛡️";
+    }
+
+    if (
+      action.includes("Dashboard")
+    ) {
+      return "📊";
+    }
+
+    if (
+      action.includes("Profile")
+    ) {
+      return "👤";
+    }
+
+    if (
+      action.includes("Password")
+    ) {
+      return "🔑";
+    }
+
+    if (
+      action.includes("VPN")
+    ) {
+      return "🔐";
+    }
+
+    if (
+      action.includes("Scan")
+    ) {
+      return "🔎";
+    }
+
+    if (
+      action.includes("Signed")
+    ) {
+      return "🚪";
+    }
+
+    if (
+      action.includes("Login")
+    ) {
+      return "🔐";
+    }
+
+    return "🛡️";
+  };
+
+  // ==========================================
   // SCORE COLOR
+  // ==========================================
+
   const getScoreColor = (score) => {
     if (score >= 80) {
       return "text-green-400";
@@ -221,7 +503,10 @@ export default function DashboardPage() {
     return "text-red-400";
   };
 
+  // ==========================================
   // SCORE MESSAGE
+  // ==========================================
+
   const getScoreMessage = (score) => {
     if (score >= 80) {
       return "Good security configuration";
@@ -234,10 +519,16 @@ export default function DashboardPage() {
     return "Several security improvements are recommended";
   };
 
+  // ==========================================
+  // LOADING
+  // ==========================================
+
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+
         <div className="text-center">
+
           <div className="text-5xl mb-4 animate-pulse">
             🛡️
           </div>
@@ -245,7 +536,9 @@ export default function DashboardPage() {
           <p className="text-slate-400">
             Loading your dashboard...
           </p>
+
         </div>
+
       </main>
     );
   }
@@ -254,20 +547,28 @@ export default function DashboardPage() {
     return null;
   }
 
+  // ==========================================
+  // DASHBOARD
+  // ==========================================
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
 
       {/* HEADER */}
       <header className="border-b border-slate-800 bg-slate-950/95">
+
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between">
 
           <div>
+
             <div className="flex items-center gap-3">
+
               <span className="text-3xl">
                 🛡️
               </span>
 
               <div>
+
                 <h1 className="text-2xl font-bold">
                   CyberGuard
                 </h1>
@@ -275,8 +576,11 @@ export default function DashboardPage() {
                 <p className="text-xs text-slate-500">
                   Security Dashboard
                 </p>
+
               </div>
+
             </div>
+
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -303,7 +607,9 @@ export default function DashboardPage() {
             </button>
 
           </div>
+
         </div>
+
       </header>
 
       {/* MAIN */}
@@ -317,12 +623,15 @@ export default function DashboardPage() {
           </p>
 
           <h2 className="mt-2 text-3xl font-bold md:text-4xl">
-            {user.displayName || "CyberGuard User"} 👋
+            {user.displayName ||
+              "CyberGuard User"}{" "}
+            👋
           </h2>
 
           <p className="mt-3 text-slate-400">
-            Manage your account, monitor security scans,
-            and protect your digital environment.
+            Manage your account, monitor security
+            scans, and protect your digital
+            environment.
           </p>
 
         </section>
@@ -379,6 +688,7 @@ export default function DashboardPage() {
             onSubmit={handleUpdateName}
             className="mt-6"
           >
+
             <div className="grid gap-4 md:grid-cols-[1fr_auto]">
 
               <input
@@ -402,6 +712,7 @@ export default function DashboardPage() {
               </button>
 
             </div>
+
           </form>
 
         </section>
@@ -414,6 +725,7 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
 
               <div>
+
                 <div className="mb-2 flex items-center gap-3">
 
                   <span className="text-3xl">
@@ -427,10 +739,12 @@ export default function DashboardPage() {
                 </div>
 
                 <p className="max-w-xl text-sm text-slate-400">
-                  Manage your CyberGuard VPN connection,
-                  select a server location, and view your
+                  Manage your CyberGuard VPN
+                  connection, select a server
+                  location, and view your
                   connection status.
                 </p>
+
               </div>
 
               <div
@@ -459,11 +773,14 @@ export default function DashboardPage() {
                 <select
                   value={vpnServer}
                   onChange={(e) =>
-                    setVpnServer(e.target.value)
+                    setVpnServer(
+                      e.target.value
+                    )
                   }
                   disabled={vpnConnected}
                   className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-cyan-500 disabled:opacity-50"
                 >
+
                   <option value="Nigeria">
                     🇳🇬 Nigeria
                   </option>
@@ -483,6 +800,7 @@ export default function DashboardPage() {
                   <option value="Canada">
                     🇨🇦 Canada
                   </option>
+
                 </select>
 
               </div>
@@ -529,6 +847,7 @@ export default function DashboardPage() {
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
 
               <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+
                 <p className="text-xs text-slate-500">
                   Server
                 </p>
@@ -536,9 +855,11 @@ export default function DashboardPage() {
                 <p className="mt-1 font-semibold text-white">
                   {vpnServer}
                 </p>
+
               </div>
 
               <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+
                 <p className="text-xs text-slate-500">
                   Encryption
                 </p>
@@ -546,9 +867,11 @@ export default function DashboardPage() {
                 <p className="mt-1 font-semibold text-cyan-400">
                   Protected
                 </p>
+
               </div>
 
               <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+
                 <p className="text-xs text-slate-500">
                   Connection
                 </p>
@@ -564,13 +887,15 @@ export default function DashboardPage() {
                     ? "Secure"
                     : "Not connected"}
                 </p>
+
               </div>
 
             </div>
 
             <p className="mt-5 text-xs text-slate-500">
-              Dashboard VPN interface. An actual VPN tunnel
-              requires a configured VPN server and client.
+              Dashboard VPN interface. An actual
+              VPN tunnel requires a configured VPN
+              server and client.
             </p>
 
           </div>
@@ -587,11 +912,15 @@ export default function DashboardPage() {
           />
 
           {scanLoading ? (
+
             <div className="mt-8 text-center text-slate-400">
               Loading scan history...
             </div>
+
           ) : scanHistory.length === 0 ? (
+
             <div className="mt-8 rounded-xl border border-dashed border-slate-700 bg-slate-950 p-8 text-center">
+
               <div className="text-4xl">
                 🔍
               </div>
@@ -601,8 +930,8 @@ export default function DashboardPage() {
               </h3>
 
               <p className="mt-2 text-sm text-slate-500">
-                Run your first website security scan
-                to see it here.
+                Run your first website security
+                scan to see it here.
               </p>
 
               <a
@@ -611,8 +940,11 @@ export default function DashboardPage() {
               >
                 Open Security Scanner
               </a>
+
             </div>
+
           ) : (
+
             <div className="mt-6 space-y-4">
 
               {scanHistory.map((scan) => (
@@ -678,12 +1010,14 @@ export default function DashboardPage() {
               ))}
 
             </div>
+
           )}
 
         </section>
 
         {/* SELECTED SCAN REPORT */}
         {selectedScan && (
+
           <section className="mt-8 rounded-2xl border border-cyan-500/20 bg-slate-900 p-6 shadow-xl">
 
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -746,7 +1080,7 @@ export default function DashboardPage() {
 
             </div>
 
-            {/* CHECKS */}
+            {/* SECURITY CHECKS */}
             <div className="mt-6">
 
               <h3 className="text-xl font-bold">
@@ -755,6 +1089,7 @@ export default function DashboardPage() {
 
               {selectedScan.checks &&
               selectedScan.checks.length > 0 ? (
+
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
 
                   {selectedScan.checks.map(
@@ -793,11 +1128,14 @@ export default function DashboardPage() {
                   )}
 
                 </div>
+
               ) : (
+
                 <div className="mt-4 rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">
-                  Detailed security checks were not saved
-                  for this scan.
+                  Detailed security checks were
+                  not saved for this scan.
                 </div>
+
               )}
 
             </div>
@@ -810,6 +1148,7 @@ export default function DashboardPage() {
               </h3>
 
               {selectedScan.securityHeaders ? (
+
                 <div className="mt-4 space-y-3">
 
                   {Object.entries(
@@ -822,11 +1161,18 @@ export default function DashboardPage() {
                     >
 
                       <span className="font-medium text-slate-300">
+
                         {key
-                          .replace(/([A-Z])/g, " $1")
-                          .replace(/^./, (letter) =>
-                            letter.toUpperCase()
+                          .replace(
+                            /([A-Z])/g,
+                            " $1"
+                          )
+                          .replace(
+                            /^./,
+                            (letter) =>
+                              letter.toUpperCase()
                           )}
+
                       </span>
 
                       <span
@@ -836,7 +1182,8 @@ export default function DashboardPage() {
                             : "text-red-400"
                         }`}
                       >
-                        {value || "Not detected"}
+                        {value ||
+                          "Not detected"}
                       </span>
 
                     </div>
@@ -844,11 +1191,14 @@ export default function DashboardPage() {
                   ))}
 
                 </div>
+
               ) : (
+
                 <div className="mt-4 rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">
-                  Security header information was not saved
-                  for this scan.
+                  Security header information
+                  was not saved for this scan.
                 </div>
+
               )}
 
             </div>
@@ -876,11 +1226,13 @@ export default function DashboardPage() {
                   value={
                     selectedScan.httpStatus
                       ? `${selectedScan.httpStatus} ${
-                          selectedScan.httpStatusText || ""
+                          selectedScan.httpStatusText ||
+                          ""
                         }`
                       : selectedScan.response?.status
                       ? `${selectedScan.response.status} ${
-                          selectedScan.response.statusText || ""
+                          selectedScan.response.statusText ||
+                          ""
                         }`
                       : "Unknown"
                   }
@@ -888,7 +1240,9 @@ export default function DashboardPage() {
 
                 <InfoItem
                   title="Scanned"
-                  value={getScanDate(selectedScan)}
+                  value={getScanDate(
+                    selectedScan
+                  )}
                 />
 
               </div>
@@ -896,7 +1250,95 @@ export default function DashboardPage() {
             </div>
 
           </section>
+
         )}
+
+        {/* ACTIVITY LOG */}
+        <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
+
+          <HeaderCard
+            icon="📋"
+            title="Security Activity"
+            description="Recent security activity on your CyberGuard account."
+          />
+
+          {activityLoading ? (
+
+            <div className="mt-8 text-center text-slate-400">
+              Loading activity...
+            </div>
+
+          ) : activityLogs.length === 0 ? (
+
+            <div className="mt-8 rounded-xl border border-dashed border-slate-700 bg-slate-950 p-8 text-center">
+
+              <div className="text-4xl">
+                🛡️
+              </div>
+
+              <h3 className="mt-3 font-semibold">
+                No activity yet
+              </h3>
+
+              <p className="mt-2 text-sm text-slate-500">
+                Your CyberGuard security activity
+                will appear here.
+              </p>
+
+            </div>
+
+          ) : (
+
+            <div className="mt-6 space-y-3">
+
+              {activityLogs
+                .slice(0, 10)
+                .map((activity) => (
+
+                  <div
+                    key={activity.id}
+                    className="flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-950 p-4"
+                  >
+
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 text-xl">
+                      {getActivityIcon(
+                        activity.action
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+
+                      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+
+                        <p className="font-semibold text-slate-200">
+                          {activity.action}
+                        </p>
+
+                        <p className="text-xs text-slate-600">
+                          {getActivityDate(
+                            activity
+                          )}
+                        </p>
+
+                      </div>
+
+                      {activity.details && (
+                        <p className="mt-1 text-sm text-slate-500">
+                          {activity.details}
+                        </p>
+                      )}
+
+                    </div>
+
+                  </div>
+
+                ))}
+
+            </div>
+
+          )}
+
+        </section>
 
         {/* QUICK ACCESS */}
         <section className="mt-8">
@@ -944,14 +1386,16 @@ export default function DashboardPage() {
           <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
             <div>
+
               <p className="font-semibold">
                 Reset your password
               </p>
 
               <p className="mt-1 text-sm text-slate-500">
-                We'll send a secure password reset link
-                to your email address.
+                We'll send a secure password
+                reset link to your email address.
               </p>
+
             </div>
 
             <button
@@ -970,6 +1414,7 @@ export default function DashboardPage() {
 
         {/* ADMIN */}
         {user.uid === ADMIN_UID && (
+
           <section className="mt-8 rounded-2xl border border-purple-500/20 bg-purple-500/5 p-6">
 
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -985,7 +1430,8 @@ export default function DashboardPage() {
                 </h2>
 
                 <p className="mt-2 text-sm text-slate-500">
-                  You have administrator access to CyberGuard.
+                  You have administrator access
+                  to CyberGuard.
                 </p>
 
               </div>
@@ -1000,6 +1446,7 @@ export default function DashboardPage() {
             </div>
 
           </section>
+
         )}
 
         {/* ACCOUNT INFORMATION */}
@@ -1015,12 +1462,18 @@ export default function DashboardPage() {
 
             <InfoItem
               title="Name"
-              value={user.displayName || "Not set"}
+              value={
+                user.displayName ||
+                "Not set"
+              }
             />
 
             <InfoItem
               title="Email"
-              value={user.email || "Not available"}
+              value={
+                user.email ||
+                "Not available"
+              }
             />
 
             <InfoItem
@@ -1052,14 +1505,15 @@ export default function DashboardPage() {
         </footer>
 
       </div>
+
     </main>
   );
 }
 
 
-/* =========================
+/* ==========================================
    STATUS CARD
-========================= */
+========================================== */
 
 function StatusCard({
   icon,
@@ -1099,9 +1553,9 @@ function StatusCard({
 }
 
 
-/* =========================
+/* ==========================================
    QUICK CARD
-========================= */
+========================================== */
 
 function QuickCard({
   icon,
@@ -1136,9 +1590,9 @@ function QuickCard({
 }
 
 
-/* =========================
+/* ==========================================
    INFO ITEM
-========================= */
+========================================== */
 
 function InfoItem({
   title,
@@ -1160,9 +1614,9 @@ function InfoItem({
 }
 
 
-/* =========================
+/* ==========================================
    HEADER CARD
-========================= */
+========================================== */
 
 function HeaderCard({
   icon,
